@@ -8,20 +8,20 @@ APK_SIGNED := $(OUTPUT_DIR)/tabidachi-signed.apk
 
 build:
 	mkdir -p $(OUTPUT_DIR)
-	$(COMPOSE) run --rm builder
+	$(COMPOSE) run --rm --build builder
 	cp app/build/outputs/apk/debug/app-debug.apk $(APK_DEBUG)
 	@echo "Debug APK: $(APK_DEBUG)"
 
 build-release:
 	mkdir -p $(OUTPUT_DIR)
-	$(COMPOSE) run --rm builder-release
+	$(COMPOSE) run --rm --build builder-release
 	cp app/build/outputs/apk/release/app-release-unsigned.apk $(APK_RELEASE_UNSIGNED)
 	@echo "Release APK: $(APK_RELEASE_UNSIGNED)"
 
 keystore:
 	@test -f .env || (echo "Copy .env.example to .env and fill in values"; exit 1)
 	mkdir -p keystore
-	$(COMPOSE) run --rm --entrypoint bash builder /workspace/scripts/keystore.sh
+	$(COMPOSE) run --rm --build --entrypoint bash builder /workspace/scripts/keystore.sh
 
 sign:
 	@test -f .env || (echo "Copy .env.example to .env and fill in values"; exit 1)
@@ -34,4 +34,4 @@ install:
 
 clean:
 	rm -rf $(OUTPUT_DIR)
-	$(COMPOSE) run --rm builder gradle clean
+	$(COMPOSE) run --rm --build builder gradle clean
