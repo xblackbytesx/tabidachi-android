@@ -78,6 +78,12 @@ class SettingsViewModel(private val app: TabidachiApp) : ViewModel() {
         _uiState.value = _uiState.value.copy(isBiometricAvailable = available)
     }
 
+    fun enablePin(pin: String) {
+        app.authManager.setupPin(pin)
+        app.isAuthenticated = true
+        _uiState.value = _uiState.value.copy(isPinEnabled = true)
+    }
+
     fun disablePin() {
         app.authManager.clearPin()
         _uiState.value = _uiState.value.copy(

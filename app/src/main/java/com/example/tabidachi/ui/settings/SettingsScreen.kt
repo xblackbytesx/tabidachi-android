@@ -43,6 +43,7 @@ import androidx.fragment.app.FragmentActivity
 import com.example.tabidachi.MainActivity
 import com.example.tabidachi.TabidachiApp
 import com.example.tabidachi.auth.BiometricHelper
+import com.example.tabidachi.ui.components.PinInput
 import com.example.tabidachi.ui.theme.TextMuted
 import com.example.tabidachi.ui.theme.TextSecondary
 import kotlinx.coroutines.launch
@@ -62,6 +63,7 @@ fun SettingsScreen(
     var showLogoutDialog by remember { mutableStateOf(false) }
     var showTripPicker by remember { mutableStateOf(false) }
     var showTimeoutPicker by remember { mutableStateOf(false) }
+    var showPinSetup by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
         viewModel.setBiometricAvailable(biometricHelper.canAuthenticate(activity))
@@ -167,13 +169,13 @@ fun SettingsScreen(
                 Switch(
                     checked = uiState.isPinEnabled,
                     onCheckedChange = { enabled ->
-                        if (!enabled) {
+                        if (enabled) {
+                            showPinSetup = true
+                        } else {
                             viewModel.disablePin()
                             (activity as? MainActivity)?.updateSecureFlag(false)
                         }
-                        // Enabling PIN requires navigation to SetupPin — handled outside
                     },
-                    enabled = uiState.isPinEnabled, // Can only disable; enable via setup
                 )
             }
 
@@ -301,6 +303,96 @@ fun SettingsScreen(
             },
         )
     }
+
+    if (showPinSetup) {
+        PinSetupDialog(
+            onPinSet = { pin ->
+                viewModel.enablePin(pin)
+                (activity as? MainActivity)?.updateSecureFlag(true)
+                showPinSetup = false
+            },
+            onDismiss = { showPinSetup = false },
+        )
+    }
+}
+
+@Composable
+private fun PinSetupDialog(
+    onPinSet: (String) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    var step by remember { mutableStateOf(0) } // 0 = enter, 1 = confirm
+    var firstPin by remember { mutableStateOf("") }
+    var pin by remember { mutableStateOf("") }
+    var error by remember { mutableStateOf(false) }
+    var errorMessage by remember { mutableStateOf<String?>(null) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(if (step == 0) "Set a PIN" else "Confirm your PIN")
+        },
+        text = {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(
+                    text = if (step == 0) "Enter a 4-digit PIN"
+                    else "Enter the same PIN again",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = TextSecondary,
+                )
+                if (errorMessage != null) {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = errorMessage!!,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error,
+                    )
+                }
+                PinInput(
+                    pin = pin,
+                    error = error,
+                    onDigit = { digit ->
+                        if (pin.length < 4) {
+                            pin += digit
+                            error = false
+                            errorMessage = null
+                            if (pin.length == 4) {
+                                when (step) {
+                                    0 -> {
+                                        firstPin = pin
+                                        pin = ""
+                                        step = 1
+                                    }
+                                    1 -> {
+                                        if (pin == firstPin) {
+                                            onPinSet(pin)
+                                        } else {
+                                            error = true
+                                            errorMessage = "PINs don't match. Try again."
+                                            pin = ""
+                                            firstPin = ""
+                                            step = 0
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    onDelete = {
+                        if (pin.isNotEmpty()) {
+                            pin = pin.dropLast(1)
+                        }
+                    },
+                )
+            }
+        },
+        confirmButton = {},
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        },
+    )
 }
 
 @Composable

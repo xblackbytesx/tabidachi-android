@@ -61,32 +61,34 @@ fun DashboardScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = {
-                    Column {
-                        Text("Tabidachi")
-                        if (uiState.lastSyncedAt != null) {
-                            val ago = formatTimeAgo(uiState.lastSyncedAt!!)
-                            Text(
-                                text = "Last synced $ago",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = TextMuted,
+            Column(modifier = Modifier.padding(top = 24.dp)) {
+                TopAppBar(
+                    title = {
+                        Column {
+                            Text("Tabidachi")
+                            if (uiState.lastSyncedAt != null) {
+                                val ago = formatTimeAgo(uiState.lastSyncedAt!!)
+                                Text(
+                                    text = "Last synced $ago",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = TextMuted,
+                                )
+                            }
+                        }
+                    },
+                    actions = {
+                        IconButton(onClick = onSettingsClick) {
+                            Icon(
+                                imageVector = Icons.Default.Settings,
+                                contentDescription = "Settings",
                             )
                         }
-                    }
-                },
-                actions = {
-                    IconButton(onClick = onSettingsClick) {
-                        Icon(
-                            imageVector = Icons.Default.Settings,
-                            contentDescription = "Settings",
-                        )
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background,
-                ),
-            )
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.background,
+                    ),
+                )
+            }
         },
         snackbarHost = { SnackbarHost(snackbarHostState) },
         containerColor = MaterialTheme.colorScheme.background,
