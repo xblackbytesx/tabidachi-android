@@ -23,7 +23,28 @@ Built with Jetpack Compose and Material 3. Designed to render your travel itiner
 
 ## Screenshots
 
-*Coming soon*
+<table>
+  <tr>
+    <td><img src="docs/screenshots/01%20-%20Trips%20-%20Tabidachi.png" width="200" alt="Trip dashboard (OLED)"></td>
+    <td><img src="docs/screenshots/02%20-%20Japan%20Itinerary%20-%20Tabidachi.png" width="200" alt="Itinerary hero header"></td>
+    <td><img src="docs/screenshots/03%20-%20Japan%20Itinerary%20-%20Tabidachi.png" width="200" alt="Day view with events"></td>
+    <td><img src="docs/screenshots/04%20-%20Japan%20Itinerary%20-%20Tabidachi.png" width="200" alt="Transit cards"></td>
+  </tr>
+  <tr>
+    <td><img src="docs/screenshots/07%20-%20Trips%20-%20non-oled%20-%20Tabidachi.png" width="200" alt="Trip dashboard (dark)"></td>
+    <td><img src="docs/screenshots/08%20-%20Japan%20Itinerary%20-%20non-oled%20-%20Tabidachi.png" width="200" alt="Itinerary hero (dark)"></td>
+    <td><img src="docs/screenshots/09%20-%20Japan%20Itinerary%20-%20non-oled%20-%20Tabidachi.png" width="200" alt="Day view (dark)"></td>
+    <td><img src="docs/screenshots/10%20-%20Japan%20Itinerary%20-%20non-oled%20-%20Tabidachi.png" width="200" alt="Transit cards (dark)"></td>
+  </tr>
+  <tr>
+    <td><img src="docs/screenshots/05%20-%20Japan%20Itinerary%20-%20Tabidachi.png" width="200" alt="Accommodation banner"></td>
+    <td><img src="docs/screenshots/06%20-%20Japan%20Itinerary%20-%20Tabidachi.png" width="200" alt="Itinerary detail"></td>
+    <td><img src="docs/screenshots/11%20-%20Settings%20-%20Tabidachi.png" width="200" alt="Settings"></td>
+    <td></td>
+  </tr>
+</table>
+
+[See all screenshots →](docs/screenshots/)
 
 ## Requirements
 
