@@ -87,8 +87,6 @@ fun TabidachiNavHost(app: TabidachiApp, activity: FragmentActivity) {
             TripDetailScreen(
                 app = app,
                 tripId = route.tripId,
-                onBack = { navController.popBackStack() },
-                onSettingsClick = { navController.navigate(SettingsRoute) },
             )
         }
 

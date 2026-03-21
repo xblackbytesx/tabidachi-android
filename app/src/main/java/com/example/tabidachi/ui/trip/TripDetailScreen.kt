@@ -9,39 +9,40 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Language
-import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -49,11 +50,12 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import com.example.tabidachi.TabidachiApp
-import com.example.tabidachi.network.ApiDay
-import com.example.tabidachi.network.ApiLeg
 import com.example.tabidachi.network.ApiTripData
 import com.example.tabidachi.ui.components.AccommodationBanner
 import com.example.tabidachi.ui.components.DayHeader
@@ -67,90 +69,128 @@ import com.example.tabidachi.ui.components.TransitCard
 import com.example.tabidachi.ui.theme.IndigoAccent
 import com.example.tabidachi.ui.theme.SuccessGreen
 import com.example.tabidachi.ui.theme.TextSecondary
+import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
+
+/**
+ * Mapping from continuous day number (0-based) to the LazyColumn item index
+ * of that day's header. Built once when trip data changes.
+ */
+private fun buildDayIndexMap(data: ApiTripData): List<Int> {
+    val map = mutableListOf<Int>()
+    var itemIndex = 1 // skip hero header
+    for (leg in data.legs) {
+        itemIndex++ // leg header
+        if (leg.accommodation != null) itemIndex++ // accommodation
+        if (leg.notes != null) itemIndex++ // leg notes
+        for (day in leg.days) {
+            map.add(itemIndex) // day header index
+            itemIndex++ // day header
+            if (day.notes != null) itemIndex++ // day notes
+            itemIndex += day.events.size // events
+        }
+    }
+    return map
+}
+
+private fun totalDays(data: ApiTripData): Int =
+    data.legs.sumOf { it.days.size }
+
+private fun todayDayIndex(data: ApiTripData): Int {
+    val todayStr = LocalDate.now().toString()
+    var idx = 0
+    for (leg in data.legs) {
+        for (day in leg.days) {
+            if (day.date == todayStr) return idx
+            idx++
+        }
+    }
+    return -1
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TripDetailScreen(
     app: TabidachiApp,
     tripId: String,
-    onBack: () -> Unit,
-    onSettingsClick: () -> Unit,
 ) {
     val viewModel = remember { TripDetailViewModel(app, tripId) }
     val uiState by viewModel.uiState.collectAsState()
     var lightboxUrl by remember { mutableStateOf<String?>(null) }
     var lightboxCredit by remember { mutableStateOf<String?>(null) }
     val listState = rememberLazyListState()
+    val carouselState = rememberLazyListState()
+    val scope = rememberCoroutineScope()
 
-    // Auto-scroll to today
-    LaunchedEffect(uiState.data) {
-        val data = uiState.data ?: return@LaunchedEffect
-        val todayStr = LocalDate.now().toString()
-        var itemIndex = 1 // skip hero header
-        for (leg in data.legs) {
-            itemIndex++ // leg header
-            if (leg.accommodation != null) itemIndex++ // accommodation
-            if (leg.notes != null) itemIndex++ // notes
-            for (day in leg.days) {
-                if (day.date == todayStr) {
-                    listState.animateScrollToItem(itemIndex)
-                    return@LaunchedEffect
-                }
-                itemIndex++ // day header
-                itemIndex += day.events.size // events
+    val navBarPadding = WindowInsets.navigationBars.asPaddingValues()
+    val navBarHeight = navBarPadding.calculateBottomPadding()
+    val carouselHeight = 56.dp + navBarHeight
+
+    val dayIndexMap = remember(uiState.data) {
+        uiState.data?.let { buildDayIndexMap(it) } ?: emptyList()
+    }
+    val numDays = remember(uiState.data) {
+        uiState.data?.let { totalDays(it) } ?: 0
+    }
+
+    var selectedDay by remember { mutableIntStateOf(-1) }
+
+    val visibleDay by remember(dayIndexMap) {
+        derivedStateOf {
+            if (dayIndexMap.isEmpty()) -1
+            else {
+                val firstVisible = listState.firstVisibleItemIndex
+                val idx = dayIndexMap.indexOfLast { it <= firstVisible + 1 }
+                if (idx >= 0) idx else 0
             }
         }
     }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = {
-                    Text(
-                        uiState.summary?.title ?: "Trip",
-                        maxLines = 1,
-                    )
-                },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back")
-                    }
-                },
-                actions = {
-                    IconButton(onClick = onSettingsClick) {
-                        Icon(Icons.Default.Settings, "Settings")
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background,
-                ),
+    LaunchedEffect(visibleDay) {
+        if (visibleDay >= 0 && selectedDay != visibleDay) {
+            selectedDay = visibleDay
+            carouselState.animateScrollToItem(
+                index = maxOf(0, visibleDay - 2),
             )
-        },
-        containerColor = MaterialTheme.colorScheme.background,
-    ) { padding ->
-        when {
-            uiState.isLoading && uiState.data == null -> {
-                LoadingState(modifier = Modifier.padding(padding))
-            }
+        }
+    }
 
-            uiState.error != null && uiState.data == null -> {
-                ErrorState(
-                    message = uiState.error!!,
-                    onRetry = { viewModel.refresh() },
-                    modifier = Modifier.padding(padding),
-                )
-            }
+    LaunchedEffect(uiState.data) {
+        val data = uiState.data ?: return@LaunchedEffect
+        val todayIdx = todayDayIndex(data)
+        if (todayIdx >= 0 && dayIndexMap.isNotEmpty()) {
+            selectedDay = todayIdx
+            listState.animateScrollToItem(dayIndexMap[todayIdx])
+            carouselState.animateScrollToItem(maxOf(0, todayIdx - 2))
+        }
+    }
 
-            uiState.data != null -> {
+    when {
+        uiState.isLoading && uiState.data == null -> {
+            LoadingState()
+        }
+
+        uiState.error != null && uiState.data == null -> {
+            ErrorState(
+                message = uiState.error!!,
+                onRetry = { viewModel.refresh() },
+            )
+        }
+
+        uiState.data != null -> {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(MaterialTheme.colorScheme.background),
+            ) {
                 PullToRefreshBox(
                     isRefreshing = uiState.isRefreshing,
                     onRefresh = { viewModel.refresh() },
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(padding),
+                        .padding(bottom = carouselHeight),
                 ) {
                     TripTimeline(
                         summary = uiState.summary,
@@ -162,11 +202,29 @@ fun TripDetailScreen(
                         },
                     )
                 }
+
+                if (numDays > 0) {
+                    DayCarousel(
+                        numDays = numDays,
+                        data = uiState.data!!,
+                        selectedDay = selectedDay,
+                        carouselState = carouselState,
+                        navBarHeight = navBarHeight,
+                        onDayClick = { dayIdx ->
+                            selectedDay = dayIdx
+                            scope.launch {
+                                if (dayIdx < dayIndexMap.size) {
+                                    listState.animateScrollToItem(dayIndexMap[dayIdx])
+                                }
+                            }
+                        },
+                        modifier = Modifier.align(Alignment.BottomCenter),
+                    )
+                }
             }
         }
     }
 
-    // Image lightbox
     if (lightboxUrl != null) {
         ImageLightbox(
             imageUrl = lightboxUrl!!,
@@ -180,6 +238,85 @@ fun TripDetailScreen(
 }
 
 @Composable
+private fun DayCarousel(
+    numDays: Int,
+    data: ApiTripData,
+    selectedDay: Int,
+    carouselState: LazyListState,
+    navBarHeight: androidx.compose.ui.unit.Dp,
+    onDayClick: (Int) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val today = LocalDate.now()
+
+    val allDays = remember(data) {
+        data.legs.flatMap { it.days }
+    }
+
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .background(
+                Brush.verticalGradient(
+                    colors = listOf(
+                        Color.Transparent,
+                        MaterialTheme.colorScheme.background.copy(alpha = 0.95f),
+                        MaterialTheme.colorScheme.background,
+                    ),
+                    startY = 0f,
+                    endY = 40f,
+                ),
+            )
+            .padding(top = 8.dp, bottom = 8.dp + navBarHeight),
+    ) {
+        LazyRow(
+            state = carouselState,
+            contentPadding = PaddingValues(horizontal = 12.dp),
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
+            items(numDays) { idx ->
+                val isSelected = idx == selectedDay
+                val isToday = try {
+                    idx < allDays.size && LocalDate.parse(allDays[idx].date) == today
+                } catch (_: Exception) {
+                    false
+                }
+
+                val bgColor = when {
+                    isSelected -> IndigoAccent
+                    isToday -> IndigoAccent.copy(alpha = 0.2f)
+                    else -> MaterialTheme.colorScheme.surfaceVariant
+                }
+                val textColor = when {
+                    isSelected -> Color.White
+                    isToday -> IndigoAccent
+                    else -> TextSecondary
+                }
+
+                Box(
+                    modifier = Modifier
+                        .size(40.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(bgColor)
+                        .clickable { onDayClick(idx) },
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(
+                        text = "${idx + 1}",
+                        style = MaterialTheme.typography.labelLarge.copy(
+                            fontWeight = if (isSelected || isToday) FontWeight.Bold else FontWeight.Medium,
+                            fontSize = 14.sp,
+                        ),
+                        color = textColor,
+                        textAlign = TextAlign.Center,
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
 private fun TripTimeline(
     summary: com.example.tabidachi.data.TripSummary?,
     data: ApiTripData,
@@ -187,13 +324,13 @@ private fun TripTimeline(
     onImageClick: (String, String?) -> Unit,
 ) {
     val today = LocalDate.now()
+    val contentPadding = PaddingValues(horizontal = 16.dp)
 
     LazyColumn(
         state = listState,
-        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        // Hero header
+        // Hero header — full bleed, no padding, hugs top edge
         item(key = "hero") {
             TripHeroHeader(
                 summary = summary,
@@ -202,64 +339,76 @@ private fun TripTimeline(
         }
 
         // Legs
+        var dayNumber = 1
         for ((legIdx, leg) in data.legs.withIndex()) {
-            // Leg header
             item(key = "leg_$legIdx") {
                 Spacer(modifier = Modifier.height(8.dp))
-                LegHeader(leg = leg, legIndex = legIdx)
+                LegHeader(
+                    leg = leg,
+                    legIndex = legIdx,
+                    modifier = Modifier.padding(contentPadding),
+                )
             }
 
-            // Accommodation
             if (leg.accommodation != null) {
                 item(key = "acc_$legIdx") {
-                    AccommodationBanner(accommodation = leg.accommodation)
+                    AccommodationBanner(
+                        accommodation = leg.accommodation,
+                        modifier = Modifier.padding(contentPadding),
+                    )
                 }
             }
 
-            // Leg notes
             if (leg.notes != null) {
                 item(key = "leg_notes_$legIdx") {
-                    ExpandableNotes(notes = leg.notes, label = "Leg notes")
+                    ExpandableNotes(
+                        notes = leg.notes,
+                        label = "Leg notes",
+                        modifier = Modifier.padding(contentPadding),
+                    )
                 }
             }
 
-            // Days
-            var dayNumber = 1
             for ((dayIdx, day) in leg.days.withIndex()) {
+                val currentDayNumber = dayNumber // capture for lambda
                 val isToday = try {
                     LocalDate.parse(day.date) == today
                 } catch (_: Exception) {
                     false
                 }
 
-                // Day header
                 item(key = "day_${legIdx}_$dayIdx") {
                     DayHeader(
                         day = day,
-                        dayNumber = dayNumber,
+                        dayNumber = currentDayNumber,
                         isToday = isToday,
+                        modifier = Modifier.padding(contentPadding),
                     )
                 }
 
-                // Day notes
                 if (day.notes != null) {
                     item(key = "day_notes_${legIdx}_$dayIdx") {
-                        ExpandableNotes(notes = day.notes, label = "Day notes")
+                        ExpandableNotes(
+                            notes = day.notes,
+                            label = "Day notes",
+                            modifier = Modifier.padding(contentPadding),
+                        )
                     }
                 }
 
-                // Events
                 for ((eventIdx, event) in day.events.withIndex()) {
                     item(key = "event_${legIdx}_${dayIdx}_$eventIdx") {
-                        if (event.type == "transit") {
-                            TransitCard(event = event)
-                        } else {
-                            EventCard(
-                                event = event,
-                                onImageClick = { url ->
-                                    onImageClick(url, event.imageCredit)
-                                },
-                            )
+                        Box(modifier = Modifier.padding(contentPadding)) {
+                            if (event.type == "transit") {
+                                TransitCard(event = event)
+                            } else {
+                                EventCard(
+                                    event = event,
+                                    onImageClick = { url ->
+                                        onImageClick(url, event.imageCredit)
+                                    },
+                                )
+                            }
                         }
                     }
                 }
@@ -268,9 +417,9 @@ private fun TripTimeline(
             }
         }
 
-        // Bottom spacer
+        // Bottom spacer so last day can scroll above carousel
         item(key = "bottom_spacer") {
-            Spacer(modifier = Modifier.height(32.dp))
+            Spacer(modifier = Modifier.height(64.dp))
         }
     }
 }
@@ -300,10 +449,9 @@ private fun TripHeroHeader(
         false
     }
 
+    // Full-bleed box — no rounding, hugs top and sides
     Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(14.dp)),
+        modifier = Modifier.fillMaxWidth(),
     ) {
         if (hasCover) {
             AsyncImage(
@@ -311,18 +459,18 @@ private fun TripHeroHeader(
                 contentDescription = data.title,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(260.dp),
+                    .height(300.dp),
                 contentScale = ContentScale.Crop,
             )
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(260.dp)
+                    .height(300.dp)
                     .background(
                         Brush.verticalGradient(
                             colors = listOf(
-                                Color.Black.copy(alpha = 0.2f),
-                                Color.Black.copy(alpha = 0.8f),
+                                Color.Black.copy(alpha = 0.1f),
+                                Color.Black.copy(alpha = 0.75f),
                             ),
                         ),
                     ),
@@ -332,8 +480,8 @@ private fun TripHeroHeader(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .then(if (hasCover) Modifier.height(260.dp) else Modifier)
-                .padding(24.dp),
+                .then(if (hasCover) Modifier.height(300.dp) else Modifier.padding(top = 48.dp))
+                .padding(horizontal = 24.dp, vertical = 24.dp),
             verticalArrangement = if (hasCover) Arrangement.Bottom else Arrangement.Top,
         ) {
             if (isActive) {
@@ -391,11 +539,12 @@ private fun TripHeroHeader(
 private fun ExpandableNotes(
     notes: String,
     label: String,
+    modifier: Modifier = Modifier,
 ) {
     var expanded by remember { mutableStateOf(false) }
 
     Column(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(8.dp))
             .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
