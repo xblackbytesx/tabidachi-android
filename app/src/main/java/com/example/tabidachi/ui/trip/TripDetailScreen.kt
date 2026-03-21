@@ -1,20 +1,24 @@
 package com.example.tabidachi.ui.trip
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -22,6 +26,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CalendarToday
@@ -47,8 +52,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -66,7 +73,10 @@ import com.example.tabidachi.ui.components.ImageLightbox
 import com.example.tabidachi.ui.components.LegHeader
 import com.example.tabidachi.ui.components.LoadingState
 import com.example.tabidachi.ui.components.TransitCard
+import com.example.tabidachi.ui.components.transportInfo
+import com.example.tabidachi.ui.theme.DarkBorder
 import com.example.tabidachi.ui.theme.IndigoAccent
+import com.example.tabidachi.ui.theme.TextMuted
 import com.example.tabidachi.ui.theme.SuccessGreen
 import com.example.tabidachi.ui.theme.TextSecondary
 import kotlinx.coroutines.launch
@@ -81,7 +91,8 @@ import java.time.format.FormatStyle
 private fun buildDayIndexMap(data: ApiTripData): List<Int> {
     val map = mutableListOf<Int>()
     var itemIndex = 1 // skip hero header
-    for (leg in data.legs) {
+    for ((legIdx, leg) in data.legs.withIndex()) {
+        if (legIdx > 0) itemIndex++ // leg divider
         itemIndex++ // leg header
         if (leg.accommodation != null) itemIndex++ // accommodation
         if (leg.notes != null) itemIndex++ // leg notes
@@ -341,8 +352,15 @@ private fun TripTimeline(
         // Legs
         var dayNumber = 1
         for ((legIdx, leg) in data.legs.withIndex()) {
+            // Decorative divider between legs
+            if (legIdx > 0) {
+                item(key = "leg_divider_$legIdx") {
+                    LegDivider(modifier = Modifier.padding(contentPadding))
+                }
+            }
+
             item(key = "leg_$legIdx") {
-                Spacer(modifier = Modifier.height(8.dp))
+                if (legIdx == 0) Spacer(modifier = Modifier.height(8.dp))
                 LegHeader(
                     leg = leg,
                     legIndex = legIdx,
@@ -370,7 +388,8 @@ private fun TripTimeline(
             }
 
             for ((dayIdx, day) in leg.days.withIndex()) {
-                val currentDayNumber = dayNumber // capture for lambda
+                val currentDayNumber = dayNumber
+
                 val isToday = try {
                     LocalDate.parse(day.date) == today
                 } catch (_: Exception) {
@@ -400,7 +419,7 @@ private fun TripTimeline(
                     item(key = "event_${legIdx}_${dayIdx}_$eventIdx") {
                         Box(modifier = Modifier.padding(contentPadding)) {
                             if (event.type == "transit") {
-                                TransitCard(event = event)
+                                TransitRoute(event = event)
                             } else {
                                 EventCard(
                                     event = event,
@@ -421,6 +440,103 @@ private fun TripTimeline(
         item(key = "bottom_spacer") {
             Spacer(modifier = Modifier.height(64.dp))
         }
+    }
+}
+
+@Composable
+private fun LegDivider(modifier: Modifier = Modifier) {
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(vertical = 12.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        // Horizontal line
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(1.dp)
+                .background(DarkBorder),
+        )
+        // Center dot
+        Box(
+            modifier = Modifier
+                .size(8.dp)
+                .clip(CircleShape)
+                .background(TextMuted),
+        )
+    }
+}
+
+@Composable
+private fun TransitRoute(
+    event: com.example.tabidachi.network.ApiEvent,
+    modifier: Modifier = Modifier,
+) {
+    val transport = transportInfo(event.transportMode)
+    val lineColor = transport.color.copy(alpha = 0.4f)
+    val dotColor = transport.color
+
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(IntrinsicSize.Min),
+    ) {
+        // Left route line with dots
+        Box(
+            modifier = Modifier
+                .width(24.dp)
+                .fillMaxHeight(),
+            contentAlignment = Alignment.TopCenter,
+        ) {
+            // Dashed vertical line
+            Canvas(
+                modifier = Modifier
+                    .width(2.dp)
+                    .fillMaxHeight()
+                    .align(Alignment.TopCenter),
+            ) {
+                val dashEffect = PathEffect.dashPathEffect(
+                    floatArrayOf(8f, 6f),
+                    0f,
+                )
+                drawLine(
+                    color = lineColor,
+                    start = Offset(size.width / 2, 0f),
+                    end = Offset(size.width / 2, size.height),
+                    strokeWidth = 2f,
+                    pathEffect = dashEffect,
+                )
+            }
+
+            // Top dot (departure)
+            Box(
+                modifier = Modifier
+                    .size(8.dp)
+                    .offset(y = 18.dp)
+                    .clip(CircleShape)
+                    .background(dotColor)
+                    .align(Alignment.TopCenter),
+            )
+
+            // Bottom dot (arrival)
+            Box(
+                modifier = Modifier
+                    .size(8.dp)
+                    .offset(y = (-10).dp)
+                    .clip(CircleShape)
+                    .background(dotColor)
+                    .align(Alignment.BottomCenter),
+            )
+        }
+
+        Spacer(modifier = Modifier.width(8.dp))
+
+        // Transit card
+        TransitCard(
+            event = event,
+            modifier = Modifier.weight(1f),
+        )
     }
 }
 
