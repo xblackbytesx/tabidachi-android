@@ -2,7 +2,7 @@
 
 Native Android companion app for [Tabidachi](https://github.com/xblackbytesx/tabidachi) — a self-hosted travel itinerary manager.
 
-Built with Jetpack Compose and Material 3. Read-only for v1, designed to render your travel itineraries beautifully on mobile. Offline-first — all data is cached locally after the first sync, so your itineraries are always available, even on a plane or in a foreign subway.
+Built with Jetpack Compose and Material 3. Designed to render your travel itineraries beautifully on mobile. Offline-first so all data is cached locally after the first sync, so your itineraries are always available, even on a plane or in a foreign subway. At this point the app is read-only so modifications are to be done at your web-based instance and are then synched to your mobile app. In the future I'll be looking at a two-way sync.
 
 ## Features
 
@@ -76,6 +76,28 @@ Produces `output/tabidachi-signed.apk`.
 | `make all` | Release build + sign |
 | `make install` | Install debug APK via ADB |
 | `make clean` | Remove build outputs |
+
+### CI/CD (GitHub Actions)
+
+Pushing a tag triggers an automated build that produces a signed APK attached to a GitHub Release.
+
+**One-time setup** — add these as repository secrets (`Settings > Secrets and variables > Actions`):
+
+| Secret | Value |
+|--------|-------|
+| `KEYSTORE_BASE64` | Base64-encoded keystore: `base64 -w 0 keystore/tabidachi.jks` |
+| `KEYSTORE_PASSWORD` | Keystore password |
+| `KEY_ALIAS` | Key alias (e.g. `tabidachi`) |
+| `KEY_PASSWORD` | Key password |
+
+**Creating a release:**
+
+```sh
+git tag v1.0.0
+git push origin v1.0.0
+```
+
+The workflow builds the release APK, signs it with your keystore, and publishes it as a GitHub Release with auto-generated release notes.
 
 ## Setup
 
