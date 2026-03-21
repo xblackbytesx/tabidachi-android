@@ -1,7 +1,7 @@
 FROM eclipse-temurin:17-jdk-jammy
 
 ENV ANDROID_HOME=/opt/android-sdk
-ENV PATH="${ANDROID_HOME}/cmdline-tools/latest/bin:${ANDROID_HOME}/platform-tools:${ANDROID_HOME}/build-tools/35.0.0:${PATH}"
+ENV PATH="${ANDROID_HOME}/cmdline-tools/latest/bin:${ANDROID_HOME}/platform-tools:${ANDROID_HOME}/build-tools/36.0.0:${PATH}"
 
 RUN apt-get update && apt-get install -y wget unzip git && rm -rf /var/lib/apt/lists/*
 
@@ -12,11 +12,11 @@ RUN mkdir -p ${ANDROID_HOME}/cmdline-tools && \
     rm /tmp/cmdline-tools.zip
 
 RUN yes | sdkmanager --licenses && \
-    sdkmanager "platform-tools" "build-tools;35.0.0" "platforms;android-35"
+    sdkmanager "platform-tools" "build-tools;36.0.0" "platforms;android-36"
 
-RUN wget -q https://services.gradle.org/distributions/gradle-8.11.1-bin.zip -O /tmp/gradle.zip && \
+RUN wget -q https://services.gradle.org/distributions/gradle-9.3.1-bin.zip -O /tmp/gradle.zip && \
     unzip -q /tmp/gradle.zip -d /opt && \
-    ln -s /opt/gradle-8.11.1/bin/gradle /usr/local/bin/gradle && \
+    ln -s /opt/gradle-9.3.1/bin/gradle /usr/local/bin/gradle && \
     rm /tmp/gradle.zip
 
 WORKDIR /workspace

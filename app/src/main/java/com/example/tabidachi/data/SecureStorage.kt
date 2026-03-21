@@ -1,11 +1,11 @@
+@file:Suppress("DEPRECATION")
+
 package com.example.tabidachi.data
 
 import android.content.Context
 import android.content.SharedPreferences
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
-
-@Suppress("DEPRECATION")
 class SecureStorage(context: Context) {
 
     private val masterKey = MasterKey.Builder(context)

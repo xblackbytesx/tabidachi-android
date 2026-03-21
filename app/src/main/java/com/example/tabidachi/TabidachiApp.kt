@@ -20,6 +20,7 @@ import io.ktor.client.engine.android.Android
 import io.ktor.client.plugins.defaultRequest
 import io.ktor.client.request.header
 
+@OptIn(coil3.annotation.ExperimentalCoilApi::class)
 class TabidachiApp : Application(), SingletonImageLoader.Factory {
 
     @Volatile

@@ -132,16 +132,16 @@ The workflow builds the release APK, signs it with your keystore, and publishes 
 
 | Component | Version |
 |-----------|---------|
-| Kotlin | 2.1.10 |
-| AGP | 8.7.3 |
-| Jetpack Compose | BOM 2025.01.01 |
+| Kotlin | 2.3.20 |
+| AGP | 9.1.0 |
+| Jetpack Compose | BOM 2026.03.00 |
 | Material 3 | via Compose BOM |
 | Compose Navigation | Type-safe routes with kotlinx.serialization |
-| Ktor Client | 3.1.1 (Android engine) |
-| Coil | 3.1.0 (Compose + Ktor network) |
-| Room | 2.7.0 + KSP |
+| Ktor Client | 3.4.1 (Android engine) |
+| Coil | 3.4.0 (Compose + Ktor network) |
+| Room | 2.8.4 + KSP |
 | BiometricPrompt | 1.1.0 |
-| Target SDK | 35 |
+| Target SDK | 36 |
 | Min SDK | 26 (Android 8.0) |
 
 ## Project Structure

@@ -2,7 +2,7 @@
 set -euo pipefail
 source .env
 ANDROID_HOME="${ANDROID_HOME:-/opt/android-sdk}"
-BUILD_TOOLS="${ANDROID_HOME}/build-tools/35.0.0"
+BUILD_TOOLS="${ANDROID_HOME}/build-tools/$(ls "${ANDROID_HOME}/build-tools/" | sort -V | tail -1)"
 INPUT="output/tabidachi-release-unsigned.apk"
 ALIGNED="output/tabidachi-release-aligned.apk"
 OUTPUT="output/tabidachi-signed.apk"

@@ -546,7 +546,7 @@ private fun TripHeroHeader(
     summary: com.example.tabidachi.data.TripSummary?,
     data: ApiTripData,
 ) {
-    val hasCover = summary?.coverImageUrl != null
+    val coverUrl = summary?.coverImageUrl
 
     val dateRange = try {
         val start = LocalDate.parse(data.startDate)
@@ -570,9 +570,9 @@ private fun TripHeroHeader(
     Box(
         modifier = Modifier.fillMaxWidth(),
     ) {
-        if (hasCover) {
+        if (coverUrl != null) {
             AsyncImage(
-                model = summary!!.coverImageUrl,
+                model = coverUrl,
                 contentDescription = data.title,
                 modifier = Modifier
                     .fillMaxWidth()
@@ -597,9 +597,9 @@ private fun TripHeroHeader(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .then(if (hasCover) Modifier.height(300.dp) else Modifier.padding(top = 48.dp))
+                .then(if (coverUrl != null) Modifier.height(300.dp) else Modifier.padding(top = 48.dp))
                 .padding(horizontal = 24.dp, vertical = 24.dp),
-            verticalArrangement = if (hasCover) Arrangement.Bottom else Arrangement.Top,
+            verticalArrangement = if (coverUrl != null) Arrangement.Bottom else Arrangement.Top,
         ) {
             if (isActive) {
                 DayTypeBadge(text = "Active now", color = SuccessGreen)
@@ -609,12 +609,12 @@ private fun TripHeroHeader(
             Text(
                 text = data.title,
                 style = MaterialTheme.typography.headlineLarge,
-                color = if (hasCover) Color.White else MaterialTheme.colorScheme.onSurface,
+                color = if (coverUrl != null) Color.White else MaterialTheme.colorScheme.onSurface,
             )
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            val contentColor = if (hasCover) Color.White.copy(alpha = 0.85f) else TextSecondary
+            val contentColor = if (coverUrl != null) Color.White.copy(alpha = 0.85f) else TextSecondary
 
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(
