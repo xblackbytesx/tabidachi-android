@@ -9,20 +9,13 @@ import io.ktor.client.plugins.defaultRequest
 import io.ktor.client.request.get
 import io.ktor.client.request.header
 import io.ktor.serialization.kotlinx.json.json
-import kotlinx.serialization.json.Json
 
 class TabidachiApi(private val secureStorage: SecureStorage) {
-
-    private val jsonConfig = Json {
-        ignoreUnknownKeys = true
-        coerceInputValues = true
-        isLenient = true
-    }
 
     private val client by lazy {
         HttpClient(Android) {
             install(ContentNegotiation) {
-                json(jsonConfig)
+                json(AppJson)
             }
             defaultRequest {
                 url(secureStorage.serverUrl.trimEnd('/') + "/")
@@ -42,7 +35,7 @@ class TabidachiApi(private val secureStorage: SecureStorage) {
     suspend fun testConnection(serverUrl: String, token: String): ApiResult<List<ApiTripSummary>> = safeApiCall {
         val testClient = HttpClient(Android) {
             install(ContentNegotiation) {
-                json(jsonConfig)
+                json(AppJson)
             }
         }
         testClient.use { c ->

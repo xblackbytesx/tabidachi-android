@@ -4,12 +4,12 @@ import com.example.tabidachi.network.ApiResult
 import com.example.tabidachi.network.ApiTripData
 import com.example.tabidachi.network.ApiTripDetail
 import com.example.tabidachi.network.ApiTripSummary
+import com.example.tabidachi.network.AppJson
 import com.example.tabidachi.network.TabidachiApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.map
-import kotlinx.serialization.json.Json
 
 sealed class SyncStatus {
     data object Idle : SyncStatus()
@@ -37,11 +37,7 @@ class TripRepository(
     private val api: TabidachiApi,
     private val dao: TripDao,
 ) {
-    private val json = Json {
-        ignoreUnknownKeys = true
-        coerceInputValues = true
-        isLenient = true
-    }
+    private val json = AppJson
 
     private val _syncStatus = MutableStateFlow<SyncStatus>(SyncStatus.Idle)
     val syncStatus: StateFlow<SyncStatus> = _syncStatus
@@ -76,9 +72,9 @@ class TripRepository(
             is ApiResult.Success -> {
                 val now = System.currentTimeMillis()
                 // Preserve existing detailJson when upserting from list endpoint
+                val existingMap = dao.getAll().associateBy { it.id }
                 val entities = result.data.map { summary ->
-                    val existing = dao.getById(summary.id)
-                    summary.toEntity(now, existingDetailJson = existing?.detailJson)
+                    summary.toEntity(now, existingDetailJson = existingMap[summary.id]?.detailJson)
                 }
                 dao.upsertAll(entities)
                 dao.deleteNotIn(result.data.map { it.id })

@@ -2,7 +2,7 @@ services:
   builder:
     build: .
     volumes:
-      - .:/workspace
+      - ..:/workspace
       - gradle-cache:/root/.gradle
     command: gradle assembleDebug
     working_dir: /workspace
@@ -10,7 +10,7 @@ services:
   builder-release:
     build: .
     volumes:
-      - .:/workspace
+      - ..:/workspace
       - gradle-cache:/root/.gradle
     command: gradle assembleRelease
     working_dir: /workspace
@@ -18,7 +18,7 @@ services:
   signer:
     image: eclipse-temurin:17-jdk-jammy
     volumes:
-      - .:/workspace
+      - ..:/workspace
       - ${ANDROID_HOME:-/opt/android-sdk}:/opt/android-sdk
     environment:
       - KEY_ALIAS

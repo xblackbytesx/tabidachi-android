@@ -17,7 +17,7 @@ abstract class AppDatabase : RoomDatabase() {
                 AppDatabase::class.java,
                 "tabidachi.db",
             )
-                .fallbackToDestructiveMigration()
+                .fallbackToDestructiveMigration(dropAllTables = true)
                 .build()
         }
     }

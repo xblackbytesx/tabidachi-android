@@ -51,11 +51,6 @@ fun DayHeader(
                 if (isToday) IndigoAccent.copy(alpha = 0.08f)
                 else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
             )
-            .then(
-                if (isToday) Modifier
-                    .background(IndigoAccent.copy(alpha = 0.08f))
-                else Modifier
-            )
             .padding(horizontal = 16.dp, vertical = 12.dp),
     ) {
         Row(

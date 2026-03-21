@@ -110,7 +110,7 @@ fun EventCard(
             }
 
             // Time
-            val timeText = formatEventTime(event.startTime, event.endTime)
+            val timeText = formatTimeRange(event.startTime, event.endTime)
             if (timeText != null) {
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
@@ -153,7 +153,7 @@ fun EventCard(
     }
 }
 
-private fun formatEventTime(start: String?, end: String?): String? {
+internal fun formatTimeRange(start: String?, end: String?): String? {
     if (start.isNullOrBlank()) return null
     return if (end.isNullOrBlank()) start else "$start — $end"
 }

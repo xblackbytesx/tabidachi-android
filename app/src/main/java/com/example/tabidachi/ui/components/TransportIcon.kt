@@ -1,11 +1,11 @@
 package com.example.tabidachi.ui.components
 
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowForward
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.automirrored.filled.DirectionsWalk
 import androidx.compose.material.icons.filled.DirectionsBoat
 import androidx.compose.material.icons.filled.DirectionsBus
 import androidx.compose.material.icons.filled.DirectionsCar
-import androidx.compose.material.icons.filled.DirectionsWalk
 import androidx.compose.material.icons.filled.Flight
 import androidx.compose.material.icons.filled.LocalTaxi
 import androidx.compose.material.icons.filled.Subway
@@ -32,8 +32,8 @@ fun transportInfo(mode: String?): TransportInfo = when (mode) {
     "bus" -> TransportInfo(Icons.Default.DirectionsBus, TransportBus)
     "car" -> TransportInfo(Icons.Default.DirectionsCar, TransportCar)
     "ferry" -> TransportInfo(Icons.Default.DirectionsBoat, TransportFerry)
-    "walk" -> TransportInfo(Icons.Default.DirectionsWalk, TransportWalk)
+    "walk" -> TransportInfo(Icons.AutoMirrored.Filled.DirectionsWalk, TransportWalk)
     "taxi" -> TransportInfo(Icons.Default.LocalTaxi, TransportTaxi)
     "tram" -> TransportInfo(Icons.Default.Tram, TransportTram)
-    else -> TransportInfo(Icons.Default.ArrowForward, TransportFlight)
+    else -> TransportInfo(Icons.AutoMirrored.Filled.ArrowForward, TransportFlight)
 }

@@ -38,14 +38,12 @@ fun LockScreen(
     val uiState by viewModel.uiState.collectAsState()
     val biometricHelper = remember { BiometricHelper() }
 
-    // Check if auth succeeded (e.g. from biometric)
+    // Navigate when auth succeeds (from PIN or biometric)
     LaunchedEffect(Unit) {
-        while (true) {
-            if (viewModel.isAuthenticated()) {
+        viewModel.authenticated.collect { authenticated ->
+            if (authenticated) {
                 onUnlocked()
-                break
             }
-            delay(100)
         }
     }
 
@@ -56,6 +54,7 @@ fun LockScreen(
                 activity = activity,
                 onSuccess = {
                     app.isAuthenticated = true
+                    viewModel.notifyAuthenticated()
                 },
                 onError = { /* User will use PIN */ },
             )

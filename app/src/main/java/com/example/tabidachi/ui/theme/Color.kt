@@ -6,7 +6,6 @@ import androidx.compose.ui.graphics.Color
 val DarkBackground = Color(0xFF0A0A0A)
 val DarkSurface = Color(0xFF141414)
 val DarkSurfaceVariant = Color(0xFF1E1E1E)
-val DarkSurfaceHigh = Color(0xFF262626)
 val DarkBorder = Color(0xFF2A2A2A)
 val DarkBorderLight = Color(0xFF333333)
 
@@ -35,7 +34,7 @@ val DayFlexible = Color(0xFF06B6D4)
 // Event type accents
 val AccommodationAmber = Color(0xFFF59E0B)
 val TransitBlue = Color(0xFF3B82F6)
-val ActivityGreen = Color(0xFF10B981)
+
 
 // Transport mode colors
 val TransportFlight = Color(0xFF60A5FA)

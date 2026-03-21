@@ -15,7 +15,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowForward
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -23,7 +23,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.example.tabidachi.network.ApiEvent
 import com.example.tabidachi.ui.theme.TextMuted
@@ -90,7 +89,7 @@ fun TransitCard(
                         color = TextSecondary,
                     )
                     Icon(
-                        imageVector = Icons.Default.ArrowForward,
+                        imageVector = Icons.AutoMirrored.Filled.ArrowForward,
                         contentDescription = null,
                         modifier = Modifier
                             .padding(horizontal = 4.dp)
@@ -111,7 +110,7 @@ fun TransitCard(
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                val timeText = formatTransitTime(event.startTime, event.endTime)
+                val timeText = formatTimeRange(event.startTime, event.endTime)
                 if (timeText != null) {
                     Text(
                         text = timeText,
@@ -155,10 +154,6 @@ fun TransitCard(
     }
 }
 
-private fun formatTransitTime(start: String?, end: String?): String? {
-    if (start.isNullOrBlank()) return null
-    return if (end.isNullOrBlank()) start else "$start — $end"
-}
 
 private fun formatDuration(iso: String): String {
     // Parse ISO8601 duration like "PT9H45M" → "9h 45m"

@@ -96,9 +96,6 @@ fun TabidachiNavHost(app: TabidachiApp, activity: FragmentActivity) {
                 activity = activity,
                 onBack = { navController.popBackStack() },
                 onLogout = {
-                    app.secureStorage.clearAll()
-                    app.prefsManager.clearAll()
-                    app.isAuthenticated = false
                     navController.navigate(SetupRoute) {
                         popUpTo(0) { inclusive = true }
                     }
