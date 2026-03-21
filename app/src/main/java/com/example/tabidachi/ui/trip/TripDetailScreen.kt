@@ -1,6 +1,8 @@
 package com.example.tabidachi.ui.trip
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -26,6 +28,9 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.waitForUpOrCancellation
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -51,12 +56,17 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -80,6 +90,7 @@ import com.example.tabidachi.ui.theme.TextMuted
 import com.example.tabidachi.ui.theme.SuccessGreen
 import com.example.tabidachi.ui.theme.TextSecondary
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
@@ -229,6 +240,14 @@ fun TripDetailScreen(
                                 }
                             }
                         },
+                        onDayScrub = { dayIdx ->
+                            selectedDay = dayIdx
+                            scope.launch {
+                                if (dayIdx < dayIndexMap.size) {
+                                    listState.scrollToItem(dayIndexMap[dayIdx])
+                                }
+                            }
+                        },
                         modifier = Modifier.align(Alignment.BottomCenter),
                     )
                 }
@@ -256,13 +275,35 @@ private fun DayCarousel(
     carouselState: LazyListState,
     navBarHeight: androidx.compose.ui.unit.Dp,
     onDayClick: (Int) -> Unit,
+    onDayScrub: (Int) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val today = LocalDate.now()
+    val density = LocalDensity.current
+    val view = LocalView.current
+    val scrubPaddingPx = with(density) { 24.dp.toPx() } // dead zone on each side
 
     val allDays = remember(data) {
         data.legs.flatMap { it.days }
     }
+
+    // Scrubber state
+    var isScrubbing by remember { mutableStateOf(false) }
+    var scrubDay by remember { mutableIntStateOf(0) }
+    var scrubX by remember { mutableStateOf(0f) }
+    var barWidth by remember { mutableStateOf(1f) } // 1f avoids division by zero
+
+    // Tile fade animation
+    val tilesAlpha by animateFloatAsState(
+        targetValue = if (isScrubbing) 0f else 1f,
+        animationSpec = tween(durationMillis = 150),
+        label = "tilesAlpha",
+    )
+    val scrubTrackAlpha by animateFloatAsState(
+        targetValue = if (isScrubbing) 1f else 0f,
+        animationSpec = tween(durationMillis = 150),
+        label = "scrubTrackAlpha",
+    )
 
     Box(
         modifier = modifier
@@ -278,50 +319,169 @@ private fun DayCarousel(
                     endY = 40f,
                 ),
             )
-            .padding(top = 8.dp, bottom = 8.dp + navBarHeight),
+            .padding(bottom = navBarHeight),
     ) {
-        LazyRow(
-            state = carouselState,
-            contentPadding = PaddingValues(horizontal = 12.dp),
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 8.dp, bottom = 8.dp)
+                .onSizeChanged { barWidth = it.width.toFloat() }
+                .pointerInput(numDays) {
+                    fun xToDay(x: Float): Int {
+                        val usable = barWidth - scrubPaddingPx * 2
+                        val normalized = ((x - scrubPaddingPx) / usable).coerceIn(0f, 1f)
+                        return (normalized * (numDays - 1)).toInt().coerceIn(0, numDays - 1)
+                    }
+
+                    val longPressTimeMs = viewConfiguration.longPressTimeoutMillis
+                    awaitEachGesture {
+                        val down = awaitFirstDown(requireUnconsumed = false)
+                        val longPressTriggered = withTimeoutOrNull(longPressTimeMs) {
+                            waitForUpOrCancellation()
+                        }
+                        if (longPressTriggered != null) {
+                            return@awaitEachGesture
+                        }
+                        // Long press triggered — activate scrubber
+                        isScrubbing = true
+                        scrubX = down.position.x.coerceIn(0f, barWidth)
+                        val initialDay = xToDay(scrubX)
+                        scrubDay = initialDay
+                        onDayScrub(initialDay)
+                        view.performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS)
+
+                        // Track drag until release
+                        while (true) {
+                            val event = awaitPointerEvent()
+                            val change = event.changes.firstOrNull() ?: break
+                            if (!change.pressed) {
+                                isScrubbing = false
+                                onDayClick(scrubDay)
+                                break
+                            }
+                            change.consume()
+                            scrubX = change.position.x.coerceIn(0f, barWidth)
+                            val day = xToDay(scrubX)
+                            if (day != scrubDay) {
+                                scrubDay = day
+                                onDayScrub(day)
+                                view.performHapticFeedback(android.view.HapticFeedbackConstants.CLOCK_TICK)
+                            }
+                        }
+                    }
+                },
         ) {
-            items(numDays) { idx ->
-                val isSelected = idx == selectedDay
-                val isToday = try {
-                    idx < allDays.size && LocalDate.parse(allDays[idx].date) == today
-                } catch (_: Exception) {
-                    false
-                }
-
-                val bgColor = when {
-                    isSelected -> IndigoAccent
-                    isToday -> IndigoAccent.copy(alpha = 0.2f)
-                    else -> MaterialTheme.colorScheme.surfaceVariant
-                }
-                val textColor = when {
-                    isSelected -> Color.White
-                    isToday -> IndigoAccent
-                    else -> TextSecondary
-                }
-
+            // Scrub track (visible during scrubbing)
+            if (scrubTrackAlpha > 0f) {
                 Box(
                     modifier = Modifier
-                        .size(40.dp)
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(bgColor)
-                        .clickable { onDayClick(idx) },
+                        .fillMaxWidth()
+                        .height(40.dp)
+                        .alpha(scrubTrackAlpha),
                     contentAlignment = Alignment.Center,
                 ) {
-                    Text(
-                        text = "${idx + 1}",
-                        style = MaterialTheme.typography.labelLarge.copy(
-                            fontWeight = if (isSelected || isToday) FontWeight.Bold else FontWeight.Medium,
-                            fontSize = 14.sp,
-                        ),
-                        color = textColor,
-                        textAlign = TextAlign.Center,
+                    // Thin track line
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 12.dp)
+                            .height(3.dp)
+                            .clip(RoundedCornerShape(1.5.dp))
+                            .background(MaterialTheme.colorScheme.surfaceVariant),
                     )
+                    // Progress fill
+                    val progress = if (numDays > 1) scrubDay.toFloat() / (numDays - 1) else 0f
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 12.dp)
+                            .height(3.dp)
+                            .clip(RoundedCornerShape(1.5.dp)),
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth(progress)
+                                .fillMaxHeight()
+                                .background(IndigoAccent),
+                        )
+                    }
                 }
+            }
+
+            // Day tiles (fade out during scrubbing)
+            if (tilesAlpha > 0f) {
+                LazyRow(
+                    state = carouselState,
+                    contentPadding = PaddingValues(horizontal = 12.dp),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    modifier = Modifier.alpha(tilesAlpha),
+                ) {
+                    items(numDays) { idx ->
+                        val isSelected = idx == selectedDay
+                        val isToday = try {
+                            idx < allDays.size && LocalDate.parse(allDays[idx].date) == today
+                        } catch (_: Exception) {
+                            false
+                        }
+
+                        val bgColor = when {
+                            isSelected -> IndigoAccent
+                            isToday -> IndigoAccent.copy(alpha = 0.2f)
+                            else -> MaterialTheme.colorScheme.surfaceVariant
+                        }
+                        val textColor = when {
+                            isSelected -> Color.White
+                            isToday -> IndigoAccent
+                            else -> TextSecondary
+                        }
+
+                        Box(
+                            modifier = Modifier
+                                .size(40.dp)
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(bgColor)
+                                .clickable { onDayClick(idx) },
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Text(
+                                text = "${idx + 1}",
+                                style = MaterialTheme.typography.labelLarge.copy(
+                                    fontWeight = if (isSelected || isToday) FontWeight.Bold else FontWeight.Medium,
+                                    fontSize = 14.sp,
+                                ),
+                                color = textColor,
+                                textAlign = TextAlign.Center,
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        // Floating day bubble (above touch point during scrubbing)
+        if (isScrubbing) {
+            val bubbleSizePx = with(density) { 48.dp.toPx() }
+            val bubbleOffsetX = with(density) {
+                val centered = scrubX - bubbleSizePx / 2
+                centered.coerceIn(4.dp.toPx(), barWidth - bubbleSizePx - 4.dp.toPx()).toDp()
+            }
+            Box(
+                modifier = Modifier
+                    .offset(x = bubbleOffsetX, y = (-36).dp)
+                    .size(48.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(IndigoAccent)
+                    .align(Alignment.BottomStart),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    text = "${scrubDay + 1}",
+                    style = MaterialTheme.typography.titleMedium.copy(
+                        fontWeight = FontWeight.Bold,
+                    ),
+                    color = Color.White,
+                    textAlign = TextAlign.Center,
+                )
             }
         }
     }
