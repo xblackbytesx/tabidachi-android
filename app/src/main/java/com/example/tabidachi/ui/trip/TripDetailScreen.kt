@@ -126,7 +126,9 @@ private fun todayDayIndex(data: ApiTripData): Int {
 fun TripDetailScreen(
     app: TabidachiApp,
     tripId: String,
+    onNavigateToDashboard: () -> Unit = {},
 ) {
+    val isDefaultTrip = app.prefsManager.isDefaultTripEnabled && app.prefsManager.defaultTripId == tripId
     val viewModel = remember { TripDetailViewModel(app, tripId) }
     val uiState by viewModel.uiState.collectAsState()
     var lightboxUrl by remember { mutableStateOf<String?>(null) }
@@ -213,6 +215,12 @@ fun TripDetailScreen(
                         onImageClick = { url, credit ->
                             lightboxUrl = url
                             lightboxCredit = credit
+                        },
+                        showDashboardLink = isDefaultTrip,
+                        onGoToDashboard = {
+                            app.prefsManager.isDefaultTripEnabled = false
+                            app.prefsManager.defaultTripId = null
+                            onNavigateToDashboard()
                         },
                     )
                 }
@@ -334,6 +342,8 @@ private fun TripTimeline(
     data: ApiTripData,
     listState: LazyListState,
     onImageClick: (String, String?) -> Unit,
+    showDashboardLink: Boolean = false,
+    onGoToDashboard: () -> Unit = {},
 ) {
     val today = remember { LocalDate.now() }
     val contentPadding = PaddingValues(horizontal = 16.dp)
@@ -437,9 +447,25 @@ private fun TripTimeline(
             }
         }
 
-        // Bottom spacer so last day can scroll above carousel
+        // Bottom footer — spacer + optional dashboard link
         item(key = "bottom_spacer") {
-            Spacer(modifier = Modifier.height(64.dp))
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 24.dp, bottom = 64.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                if (showDashboardLink) {
+                    Text(
+                        text = "Go to dashboard",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = TextMuted,
+                        modifier = Modifier
+                            .clickable { onGoToDashboard() }
+                            .padding(12.dp),
+                    )
+                }
+            }
         }
     }
 }

@@ -30,8 +30,7 @@ fun AccommodationBanner(
     accommodation: ApiAccommodation,
     modifier: Modifier = Modifier,
 ) {
-    val checkInFormatted = formatAccommodationTime(accommodation.checkIn)
-    val checkOutFormatted = formatAccommodationTime(accommodation.checkOut)
+    val stayInfo = formatStayInfo(accommodation.checkIn, accommodation.checkOut)
 
     Row(
         modifier = modifier
@@ -69,13 +68,7 @@ fun AccommodationBanner(
             Spacer(modifier = Modifier.height(6.dp))
 
             Text(
-                text = "Check-in: $checkInFormatted",
-                style = MaterialTheme.typography.bodySmall,
-                color = TextSecondary,
-            )
-
-            Text(
-                text = "Check-out: $checkOutFormatted",
+                text = stayInfo,
                 style = MaterialTheme.typography.bodySmall,
                 color = TextSecondary,
             )
@@ -92,20 +85,32 @@ fun AccommodationBanner(
     }
 }
 
-private fun formatAccommodationTime(isoDateTime: String): String {
-    // Input: "2025-04-17T15:00" → "Apr 17, 3:00 PM"
+private fun parseDate(isoDateTime: String): java.time.LocalDate? {
     return try {
-        val parts = isoDateTime.split("T")
-        if (parts.size == 2) {
-            val date = java.time.LocalDate.parse(parts[0])
-            val time = java.time.LocalTime.parse(parts[1])
-            val dateFmt = java.time.format.DateTimeFormatter.ofPattern("MMM d")
-            val timeFmt = java.time.format.DateTimeFormatter.ofPattern("h:mm a")
-            "${date.format(dateFmt)}, ${time.format(timeFmt)}"
-        } else {
-            isoDateTime
-        }
+        java.time.LocalDate.parse(isoDateTime.substringBefore("T"))
     } catch (_: Exception) {
-        isoDateTime
+        null
     }
+}
+
+private fun formatDayShort(date: java.time.LocalDate): String {
+    val dow = date.dayOfWeek.getDisplayName(java.time.format.TextStyle.SHORT, java.util.Locale.ENGLISH)
+    val day = date.dayOfMonth
+    val suffix = when {
+        day in 11..13 -> "th"
+        day % 10 == 1 -> "st"
+        day % 10 == 2 -> "nd"
+        day % 10 == 3 -> "rd"
+        else -> "th"
+    }
+    return "$dow $day$suffix"
+}
+
+private fun formatStayInfo(checkIn: String, checkOut: String): String {
+    val inDate = parseDate(checkIn)
+    val outDate = parseDate(checkOut)
+    if (inDate == null || outDate == null) return "$checkIn – $checkOut"
+    val nights = java.time.temporal.ChronoUnit.DAYS.between(inDate, outDate)
+    val nightLabel = if (nights == 1L) "1 night" else "$nights nights"
+    return "in ${formatDayShort(inDate)}  ·  out ${formatDayShort(outDate)} ($nightLabel)"
 }

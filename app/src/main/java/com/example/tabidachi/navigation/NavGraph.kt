@@ -87,6 +87,11 @@ fun TabidachiNavHost(app: TabidachiApp, activity: FragmentActivity) {
             TripDetailScreen(
                 app = app,
                 tripId = route.tripId,
+                onNavigateToDashboard = {
+                    navController.navigate(DashboardRoute) {
+                        popUpTo(0) { inclusive = true }
+                    }
+                },
             )
         }
 
