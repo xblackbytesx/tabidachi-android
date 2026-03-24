@@ -34,6 +34,7 @@ val DayFlexible = Color(0xFF06B6D4)
 // Event type accents
 val AccommodationAmber = Color(0xFFF59E0B)
 val TransitBlue = Color(0xFF3B82F6)
+val TicketOrange = Color(0xFFF97316)
 
 
 // Transport mode colors

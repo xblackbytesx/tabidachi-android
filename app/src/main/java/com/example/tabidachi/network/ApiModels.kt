@@ -92,6 +92,10 @@ data class ApiEvent(
     val optional: Boolean = false,
     // activity fields
     val location: String? = null,
+    val address: String? = null,
+    val latitude: String? = null,
+    val longitude: String? = null,
+    val url: String? = null,
     val ticketRequired: Boolean = false,
     val bookingReference: String? = null,
     @SerialName("imageURL")
@@ -114,4 +118,6 @@ data class ApiEvent(
 data class ApiTransitPoint(
     val location: String,
     val code: String? = null,
+    val latitude: String? = null,
+    val longitude: String? = null,
 )

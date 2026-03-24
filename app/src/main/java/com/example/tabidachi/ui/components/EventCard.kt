@@ -1,5 +1,7 @@
 package com.example.tabidachi.ui.components
 
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -14,7 +16,9 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ConfirmationNumber
 import androidx.compose.material.icons.filled.Hotel
+import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -24,6 +28,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
@@ -34,6 +40,7 @@ import com.example.tabidachi.ui.theme.IndigoAccent
 import com.example.tabidachi.ui.theme.SuccessGreen
 import com.example.tabidachi.ui.theme.TextMuted
 import com.example.tabidachi.ui.theme.TextSecondary
+import com.example.tabidachi.ui.theme.TicketOrange
 
 @Composable
 fun EventCard(
@@ -41,6 +48,7 @@ fun EventCard(
     onImageClick: ((String) -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
+    val context = LocalContext.current
     val isAccommodation = event.type == "accommodation"
     val bgColor = if (isAccommodation) AccommodationAmber.copy(alpha = 0.06f)
     else MaterialTheme.colorScheme.surfaceVariant
@@ -98,6 +106,9 @@ fun EventCard(
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f),
                 )
+                if (event.ticketRequired) {
+                    DayTypeBadge(text = "Ticket", color = TicketOrange)
+                }
                 if (event.optional) {
                     DayTypeBadge(text = "Optional", color = IndigoAccent)
                 }
@@ -120,14 +131,37 @@ fun EventCard(
                 )
             }
 
-            // Location
+            // Location (clickable when coordinates or address available)
             if (event.location != null) {
                 Spacer(modifier = Modifier.height(2.dp))
+                val hasCoords = !event.latitude.isNullOrBlank() && !event.longitude.isNullOrBlank()
+                val isClickable = hasCoords || !event.address.isNullOrBlank()
+
                 Text(
                     text = event.location,
                     style = MaterialTheme.typography.bodySmall,
-                    color = TextSecondary,
+                    color = if (isClickable) IndigoAccent else TextSecondary,
+                    modifier = if (isClickable) Modifier.clickable {
+                        val uri = if (hasCoords) {
+                            Uri.parse("geo:${event.latitude},${event.longitude}?q=${event.latitude},${event.longitude}(${Uri.encode(event.location)})")
+                        } else {
+                            Uri.parse("geo:0,0?q=${Uri.encode(event.address ?: event.location)}")
+                        }
+                        try { context.startActivity(Intent(Intent.ACTION_VIEW, uri)) } catch (_: Exception) {}
+                    } else Modifier,
                 )
+
+                // Address (below location when present and different)
+                if (!event.address.isNullOrBlank() && event.address != event.location) {
+                    Spacer(modifier = Modifier.height(1.dp))
+                    Text(
+                        text = event.address,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = TextMuted,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
             }
 
             // Booking reference
@@ -138,6 +172,38 @@ fun EventCard(
                     style = MaterialTheme.typography.labelSmall,
                     color = TextMuted,
                 )
+            }
+
+            // URL link
+            if (!event.url.isNullOrBlank()) {
+                Spacer(modifier = Modifier.height(4.dp))
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.clickable {
+                        val uri = if (event.url.startsWith("http://") || event.url.startsWith("https://")) {
+                            Uri.parse(event.url)
+                        } else {
+                            Uri.parse("https://${event.url}")
+                        }
+                        try { context.startActivity(Intent(Intent.ACTION_VIEW, uri)) } catch (_: Exception) {}
+                    },
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Link,
+                        contentDescription = null,
+                        modifier = Modifier.size(12.dp),
+                        tint = IndigoAccent,
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        text = event.url.removePrefix("https://").removePrefix("http://").trimEnd('/'),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = IndigoAccent,
+                        textDecoration = TextDecoration.Underline,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
             }
 
             // Notes
