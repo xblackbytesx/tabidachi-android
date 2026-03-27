@@ -1,7 +1,10 @@
 package com.example.tabidachi.ui.components
 
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -23,6 +26,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.example.tabidachi.network.ApiEvent
 import com.example.tabidachi.ui.theme.TextMuted
@@ -34,6 +38,7 @@ fun TransitCard(
     event: ApiEvent,
     modifier: Modifier = Modifier,
 ) {
+    val context = LocalContext.current
     val transport = transportInfo(event.transportMode)
 
     Row(
@@ -70,7 +75,7 @@ fun TransitCard(
                 color = MaterialTheme.colorScheme.onSurface,
             )
 
-            // Route: Departure → Arrival
+            // Route: Departure → Arrival (clickable when coordinates available)
             if (event.departure != null && event.arrival != null) {
                 Spacer(modifier = Modifier.height(4.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -82,11 +87,19 @@ fun TransitCard(
                         append(event.arrival.location)
                         if (event.arrival.code != null) append(" (${event.arrival.code})")
                     }
+                    val depHasCoords = !event.departure.latitude.isNullOrBlank() &&
+                            !event.departure.longitude.isNullOrBlank()
+                    val arrHasCoords = !event.arrival.latitude.isNullOrBlank() &&
+                            !event.arrival.longitude.isNullOrBlank()
 
                     Text(
                         text = depText,
                         style = MaterialTheme.typography.bodySmall,
-                        color = TextSecondary,
+                        color = if (depHasCoords) TransitBlue else TextSecondary,
+                        modifier = if (depHasCoords) Modifier.clickable {
+                            val uri = Uri.parse("geo:${event.departure.latitude},${event.departure.longitude}?q=${event.departure.latitude},${event.departure.longitude}(${Uri.encode(event.departure.location)})")
+                            try { context.startActivity(Intent(Intent.ACTION_VIEW, uri)) } catch (_: Exception) {}
+                        } else Modifier,
                     )
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowForward,
@@ -99,7 +112,11 @@ fun TransitCard(
                     Text(
                         text = arrText,
                         style = MaterialTheme.typography.bodySmall,
-                        color = TextSecondary,
+                        color = if (arrHasCoords) TransitBlue else TextSecondary,
+                        modifier = if (arrHasCoords) Modifier.clickable {
+                            val uri = Uri.parse("geo:${event.arrival.latitude},${event.arrival.longitude}?q=${event.arrival.latitude},${event.arrival.longitude}(${Uri.encode(event.arrival.location)})")
+                            try { context.startActivity(Intent(Intent.ACTION_VIEW, uri)) } catch (_: Exception) {}
+                        } else Modifier,
                     )
                 }
             }

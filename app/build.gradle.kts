@@ -1,3 +1,29 @@
+fun gitVersionName(): String {
+    return try {
+        val proc = ProcessBuilder("git", "describe", "--tags", "--always")
+            .directory(rootDir)
+            .redirectErrorStream(true)
+            .start()
+        proc.inputStream.bufferedReader().readLine()?.trim()
+            ?.removePrefix("v") ?: "0.0.1"
+    } catch (_: Exception) { "0.0.1" }
+}
+
+fun gitVersionCode(): Int {
+    return try {
+        val tag = ProcessBuilder("git", "describe", "--tags", "--always", "--abbrev=0")
+            .directory(rootDir)
+            .redirectErrorStream(true)
+            .start()
+            .inputStream.bufferedReader().readLine()?.trim()
+            ?.removePrefix("v") ?: "0.0.1"
+        val parts = tag.split(".").map { it.toIntOrNull() ?: 0 }
+        (parts.getOrElse(0) { 0 } * 10000) +
+        (parts.getOrElse(1) { 0 } * 100) +
+         parts.getOrElse(2) { 0 }
+    } catch (_: Exception) { 1 }
+}
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.plugin.compose")
@@ -13,8 +39,8 @@ android {
         applicationId = "com.example.tabidachi"
         minSdk = 26
         targetSdk = 36
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = gitVersionCode()
+        versionName = gitVersionName()
     }
 
     buildTypes {
