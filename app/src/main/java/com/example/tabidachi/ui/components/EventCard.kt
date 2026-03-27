@@ -150,18 +150,6 @@ fun EventCard(
                         try { context.startActivity(Intent(Intent.ACTION_VIEW, uri)) } catch (_: Exception) {}
                     } else Modifier,
                 )
-
-                // Address (below location when present and different)
-                if (!event.address.isNullOrBlank() && event.address != event.location) {
-                    Spacer(modifier = Modifier.height(1.dp))
-                    Text(
-                        text = event.address,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = TextMuted,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                }
             }
 
             // Booking reference
