@@ -64,13 +64,14 @@ fun DayHeader(
                     style = MaterialTheme.typography.labelSmall,
                     color = if (isToday) IndigoAccent else TextSecondary,
                 )
-                Spacer(modifier = Modifier.height(2.dp))
+                Spacer(modifier = Modifier.height(4.dp))
                 Text(
                     text = formattedDate,
                     style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.onSurface,
                 )
                 if (day.label != null) {
+                    Spacer(modifier = Modifier.height(4.dp))
                     Text(
                         text = day.label,
                         style = MaterialTheme.typography.bodySmall,

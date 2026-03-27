@@ -18,9 +18,11 @@ fun gitVersionCode(): Int {
             .inputStream.bufferedReader().readLine()?.trim()
             ?.removePrefix("v") ?: "0.0.1"
         val parts = tag.split(".").map { it.toIntOrNull() ?: 0 }
-        (parts.getOrElse(0) { 0 } * 10000) +
-        (parts.getOrElse(1) { 0 } * 100) +
-         parts.getOrElse(2) { 0 }
+        maxOf(1,
+            (parts.getOrElse(0) { 0 } * 10000) +
+            (parts.getOrElse(1) { 0 } * 100) +
+             parts.getOrElse(2) { 0 }
+        )
     } catch (_: Exception) { 1 }
 }
 

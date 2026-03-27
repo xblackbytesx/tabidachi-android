@@ -133,7 +133,7 @@ fun EventCard(
 
             // Location (clickable when coordinates or address available)
             if (event.location != null) {
-                Spacer(modifier = Modifier.height(2.dp))
+                Spacer(modifier = Modifier.height(4.dp))
                 val hasCoords = !event.latitude.isNullOrBlank() && !event.longitude.isNullOrBlank()
                 val isClickable = hasCoords || !event.address.isNullOrBlank()
 
