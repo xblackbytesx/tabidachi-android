@@ -12,6 +12,7 @@ import com.example.tabidachi.ui.lock.LockScreen
 import com.example.tabidachi.ui.settings.SettingsScreen
 import com.example.tabidachi.ui.setup.SetupPinScreen
 import com.example.tabidachi.ui.setup.SetupScreen
+import com.example.tabidachi.ui.trip.SharedTripScreen
 import com.example.tabidachi.ui.trip.TripDetailScreen
 
 @Composable
@@ -79,6 +80,19 @@ fun TabidachiNavHost(app: TabidachiApp, activity: FragmentActivity) {
                 onSettingsClick = {
                     navController.navigate(SettingsRoute)
                 },
+                onOpenSharedTrip = { serverUrl, shareToken ->
+                    navController.navigate(SharedTripRoute(serverUrl, shareToken))
+                },
+            )
+        }
+
+        composable<SharedTripRoute> { backStackEntry ->
+            val route = backStackEntry.toRoute<SharedTripRoute>()
+            SharedTripScreen(
+                app = app,
+                serverUrl = route.serverUrl,
+                shareToken = route.shareToken,
+                onNavigateBack = { navController.popBackStack() },
             )
         }
 
