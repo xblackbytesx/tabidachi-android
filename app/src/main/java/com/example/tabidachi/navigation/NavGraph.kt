@@ -36,6 +36,14 @@ fun TabidachiNavHost(app: TabidachiApp, activity: FragmentActivity) {
                         popUpTo<SetupRoute> { inclusive = true }
                     }
                 },
+                onOpenSharedTrip = { serverUrl, shareToken ->
+                    // No popUpTo — back press returns to SetupScreen
+                    navController.navigate(SharedTripRoute(serverUrl, shareToken))
+                },
+                onViewSavedTrips = {
+                    // No popUpTo — back press returns to SetupScreen
+                    navController.navigate(DashboardRoute)
+                },
             )
         }
 

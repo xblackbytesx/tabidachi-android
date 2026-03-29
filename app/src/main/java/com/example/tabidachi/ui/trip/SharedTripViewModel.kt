@@ -58,6 +58,7 @@ class SharedTripViewModel(
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isSaving = true)
             app.tripRepository.pinSharedTrip(detail, serverUrl, shareToken)
+            app.prefsManager.hasPinnedSharedTrips = true
             _uiState.value = _uiState.value.copy(isSaving = false, isPinned = true)
         }
     }

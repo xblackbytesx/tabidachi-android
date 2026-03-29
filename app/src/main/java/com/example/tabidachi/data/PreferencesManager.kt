@@ -28,6 +28,10 @@ class PreferencesManager(context: Context) {
         get() = prefs.getBoolean(KEY_SETUP_COMPLETED, false)
         set(value) = prefs.edit().putBoolean(KEY_SETUP_COMPLETED, value).apply()
 
+    var hasPinnedSharedTrips: Boolean
+        get() = prefs.getBoolean(KEY_HAS_PINNED_SHARED, false)
+        set(value) = prefs.edit().putBoolean(KEY_HAS_PINNED_SHARED, value).apply()
+
     fun clearAll() {
         prefs.edit().clear().apply()
     }
@@ -38,6 +42,7 @@ class PreferencesManager(context: Context) {
         private const val KEY_DEFAULT_TRIP_ENABLED = "default_trip_enabled"
         private const val KEY_AUTO_LOCK_TIMEOUT = "auto_lock_timeout"
         private const val KEY_SETUP_COMPLETED = "setup_completed"
+        private const val KEY_HAS_PINNED_SHARED = "has_pinned_shared_trips"
         const val DEFAULT_TIMEOUT_MS = 60_000L
     }
 }
