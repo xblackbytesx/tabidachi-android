@@ -19,3 +19,6 @@ data class TripDetailRoute(val tripId: String)
 
 @Serializable
 data object SettingsRoute
+
+@Serializable
+data class SharedTripRoute(val serverUrl: String, val shareToken: String)

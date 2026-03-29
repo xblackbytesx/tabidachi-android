@@ -24,12 +24,23 @@ class TabidachiApi(private val secureStorage: SecureStorage) {
         }
     }
 
+    // Reusable unauthenticated client for public share endpoints. No Bearer token, no base URL.
+    private val shareClient by lazy {
+        HttpClient(Android) {
+            install(ContentNegotiation) { json(AppJson) }
+        }
+    }
+
     suspend fun listTrips(): ApiResult<List<ApiTripSummary>> = safeApiCall {
         client.get("api/v1/trips").body()
     }
 
     suspend fun getTrip(id: String): ApiResult<ApiTripDetail> = safeApiCall {
         client.get("api/v1/trips/$id").body()
+    }
+
+    suspend fun getSharedTrip(serverUrl: String, shareToken: String): ApiResult<ApiTripDetail> = safeApiCall {
+        shareClient.get(serverUrl.trimEnd('/') + "/api/v1/share/$shareToken").body()
     }
 
     suspend fun testConnection(serverUrl: String, token: String): ApiResult<List<ApiTripSummary>> = safeApiCall {

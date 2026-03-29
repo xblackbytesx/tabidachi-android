@@ -18,4 +18,7 @@ data class TripEntity(
     val updatedAt: String,
     val detailJson: String?,
     val lastSyncedAt: Long,
+    val isShared: Boolean = false,
+    val sharedFromServerUrl: String? = null,
+    val sharedToken: String? = null,
 )

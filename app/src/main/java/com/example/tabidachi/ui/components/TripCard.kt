@@ -15,11 +15,13 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CalendarToday
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Explore
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -45,6 +47,7 @@ fun TripCard(
     trip: TripSummary,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    onRemove: (() -> Unit)? = null,
 ) {
     val isActive = try {
         val today = LocalDate.now()
@@ -82,6 +85,23 @@ fun TripCard(
         ),
     ) {
         Box(modifier = Modifier.fillMaxSize()) {
+            if (onRemove != null) {
+                IconButton(
+                    onClick = onRemove,
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(4.dp),
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Close,
+                        contentDescription = "Remove shared trip",
+                        tint = if (trip.coverImageUrl != null) androidx.compose.ui.graphics.Color.White.copy(alpha = 0.8f)
+                               else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                        modifier = Modifier.size(18.dp),
+                    )
+                }
+            }
+
             if (trip.coverImageUrl != null) {
                 AsyncImage(
                     model = trip.coverImageUrl,

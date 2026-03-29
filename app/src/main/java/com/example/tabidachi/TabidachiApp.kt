@@ -15,6 +15,7 @@ import com.example.tabidachi.data.PreferencesManager
 import com.example.tabidachi.data.SecureStorage
 import com.example.tabidachi.data.TripRepository
 import com.example.tabidachi.network.TabidachiApi
+import android.net.Uri
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.android.Android
 import io.ktor.client.plugins.defaultRequest
@@ -41,7 +42,15 @@ class TabidachiApp : Application(), SingletonImageLoader.Factory {
             defaultRequest {
                 val token = secureStorage.apiToken
                 if (token.isNotBlank()) {
-                    header("Authorization", "Bearer $token")
+                    // Only attach Bearer auth to the user's own configured server, so that
+                    // public /share/:token/uploads/* routes on foreign instances never
+                    // receive the token.
+                    val configuredHost = try {
+                        Uri.parse(secureStorage.serverUrl).host ?: ""
+                    } catch (_: Exception) { "" }
+                    if (url.host == configuredHost) {
+                        header("Authorization", "Bearer $token")
+                    }
                 }
             }
         }

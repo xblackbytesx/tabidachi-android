@@ -88,7 +88,7 @@ import java.time.format.FormatStyle
  * Mapping from continuous day number (0-based) to the LazyColumn item index
  * of that day's header. Built once when trip data changes.
  */
-private fun buildDayIndexMap(data: ApiTripData): List<Int> {
+internal fun buildDayIndexMap(data: ApiTripData): List<Int> {
     val map = mutableListOf<Int>()
     var itemIndex = 1 // skip hero header
     for ((legIdx, leg) in data.legs.withIndex()) {
@@ -106,10 +106,10 @@ private fun buildDayIndexMap(data: ApiTripData): List<Int> {
     return map
 }
 
-private fun totalDays(data: ApiTripData): Int =
+internal fun totalDays(data: ApiTripData): Int =
     data.legs.sumOf { it.days.size }
 
-private fun todayDayIndex(data: ApiTripData): Int {
+internal fun todayDayIndex(data: ApiTripData): Int {
     val todayStr = LocalDate.now().toString()
     var idx = 0
     for (leg in data.legs) {
@@ -260,7 +260,7 @@ fun TripDetailScreen(
 }
 
 @Composable
-private fun DayCarousel(
+internal fun DayCarousel(
     numDays: Int,
     data: ApiTripData,
     selectedDay: Int,
@@ -337,7 +337,7 @@ private fun DayCarousel(
 }
 
 @Composable
-private fun TripTimeline(
+internal fun TripTimeline(
     summary: com.example.tabidachi.data.TripSummary?,
     data: ApiTripData,
     listState: LazyListState,

@@ -26,8 +26,14 @@ interface TripDao {
     @Upsert
     suspend fun upsert(trip: TripEntity)
 
-    @Query("DELETE FROM trips WHERE id NOT IN (:ids)")
-    suspend fun deleteNotIn(ids: List<String>)
+    @Query("DELETE FROM trips WHERE id NOT IN (:ids) AND isShared = 0")
+    suspend fun deleteOwnedNotIn(ids: List<String>)
+
+    @Query("SELECT * FROM trips WHERE isShared = 1")
+    suspend fun getSharedTrips(): List<TripEntity>
+
+    @Query("DELETE FROM trips WHERE id = :id AND isShared = 1")
+    suspend fun deleteSharedTrip(id: String)
 
     @Query("DELETE FROM trips")
     suspend fun deleteAll()
