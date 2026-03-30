@@ -18,8 +18,7 @@ import com.example.tabidachi.network.TabidachiApi
 import android.net.Uri
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.android.Android
-import io.ktor.client.plugins.defaultRequest
-import io.ktor.client.request.header
+import io.ktor.client.plugins.HttpRequestPipeline
 
 @OptIn(coil3.annotation.ExperimentalCoilApi::class)
 class TabidachiApp : Application(), SingletonImageLoader.Factory {
@@ -38,22 +37,25 @@ class TabidachiApp : Application(), SingletonImageLoader.Factory {
     val authManager by lazy { AuthManager(secureStorage) }
 
     override fun newImageLoader(context: PlatformContext): ImageLoader {
-        val imageHttpClient = HttpClient(Android) {
-            defaultRequest {
-                val token = secureStorage.apiToken
-                if (token.isNotBlank()) {
-                    // Only attach Bearer auth to the user's own configured server, so that
-                    // public /share/:token/uploads/* routes on foreign instances never
-                    // receive the token.
-                    val configuredHost = try {
-                        Uri.parse(secureStorage.serverUrl).host ?: ""
-                    } catch (_: Exception) { "" }
-                    if (url.host == configuredHost) {
-                        header("Authorization", "Bearer $token")
-                    }
+        val imageHttpClient = HttpClient(Android)
+
+        // Attach Bearer auth only to requests targeting the user's own configured server.
+        // Using requestPipeline.intercept instead of defaultRequest because defaultRequest
+        // runs the block on a fresh URLBuilder (url.host == ""), not the actual request URL.
+        imageHttpClient.requestPipeline.intercept(HttpRequestPipeline.Render) {
+            val token = secureStorage.apiToken
+            if (token.isNotBlank()) {
+                val configuredHost = try {
+                    Uri.parse(secureStorage.serverUrl).host ?: ""
+                } catch (_: Exception) { "" }
+                // this.context is the HttpRequestBuilder for the actual outgoing request.
+                if (this.context.url.host == configuredHost) {
+                    this.context.headers["Authorization"] = "Bearer $token"
                 }
             }
+            proceed()
         }
+
         return ImageLoader.Builder(context)
             .components {
                 add(KtorNetworkFetcherFactory(httpClient = imageHttpClient))
