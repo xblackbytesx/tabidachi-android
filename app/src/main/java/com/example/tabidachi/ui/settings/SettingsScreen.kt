@@ -55,6 +55,7 @@ fun SettingsScreen(
     activity: FragmentActivity,
     onBack: () -> Unit,
     onLogout: () -> Unit,
+    onConnectAccount: () -> Unit = {},
 ) {
     val viewModel = remember { SettingsViewModel(app) }
     val uiState by viewModel.uiState.collectAsState()
@@ -248,32 +249,48 @@ fun SettingsScreen(
             // --- Account ---
             SectionHeader("Account")
 
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 8.dp, horizontal = 4.dp),
-            ) {
-                Column {
-                    Text(
-                        "Server",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurface,
-                    )
-                    Text(
-                        uiState.serverUrl,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = TextSecondary,
-                    )
+            if (uiState.serverUrl.isNotBlank()) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 8.dp, horizontal = 4.dp),
+                ) {
+                    Column {
+                        Text(
+                            "Server",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurface,
+                        )
+                        Text(
+                            uiState.serverUrl,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = TextSecondary,
+                        )
+                    }
                 }
-            }
 
-            Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(16.dp))
 
-            OutlinedButton(
-                onClick = { showLogoutDialog = true },
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Text("Disconnect", color = MaterialTheme.colorScheme.error)
+                OutlinedButton(
+                    onClick = { showLogoutDialog = true },
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text("Disconnect", color = MaterialTheme.colorScheme.error)
+                }
+            } else {
+                SettingsRow(
+                    title = "No account connected",
+                    subtitle = "Add a Tabidachi account to manage your own trips",
+                ) {}
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                OutlinedButton(
+                    onClick = onConnectAccount,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text("Connect account")
+                }
             }
 
             Spacer(modifier = Modifier.height(32.dp))
