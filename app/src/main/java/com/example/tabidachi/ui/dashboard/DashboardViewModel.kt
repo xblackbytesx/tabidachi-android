@@ -3,13 +3,10 @@ package com.example.tabidachi.ui.dashboard
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.tabidachi.TabidachiApp
-import com.example.tabidachi.data.SyncStatus
 import com.example.tabidachi.data.TripSummary
 import com.example.tabidachi.network.ApiResult
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 data class DashboardUiState(
@@ -18,6 +15,7 @@ data class DashboardUiState(
     val isLoading: Boolean = true,
     val isRefreshing: Boolean = false,
     val error: String? = null,
+    val refreshFailed: Boolean = false,
     val lastSyncedAt: Long? = null,
 )
 
@@ -25,9 +23,6 @@ class DashboardViewModel(private val app: TabidachiApp) : ViewModel() {
 
     private val _uiState = MutableStateFlow(DashboardUiState())
     val uiState: StateFlow<DashboardUiState> = _uiState
-
-    val syncStatus = app.tripRepository.syncStatus
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), SyncStatus.Idle)
 
     init {
         viewModelScope.launch {
@@ -50,18 +45,29 @@ class DashboardViewModel(private val app: TabidachiApp) : ViewModel() {
             _uiState.value = _uiState.value.copy(isRefreshing = true, error = null)
             // Refresh shared trips in the background — best-effort, failures keep the offline cache intact
             launch { app.tripRepository.refreshSharedTrips() }
-            when (val result = app.tripRepository.refreshTrips()) {
-                is ApiResult.Success -> {
-                    _uiState.value = _uiState.value.copy(isRefreshing = false)
+            // Only call the authenticated list endpoint when an account is configured.
+            // Users with only pinned shared trips have no token and the call would always fail.
+            if (app.secureStorage.serverUrl.isNotBlank() && app.secureStorage.apiToken.isNotBlank()) {
+                when (val result = app.tripRepository.refreshTrips()) {
+                    is ApiResult.Success -> {
+                        _uiState.value = _uiState.value.copy(isRefreshing = false)
+                    }
+                    is ApiResult.Error -> {
+                        _uiState.value = _uiState.value.copy(
+                            isRefreshing = false,
+                            error = if (_uiState.value.ownedTrips.isEmpty()) result.message else null,
+                            refreshFailed = _uiState.value.ownedTrips.isNotEmpty(),
+                        )
+                    }
                 }
-                is ApiResult.Error -> {
-                    _uiState.value = _uiState.value.copy(
-                        isRefreshing = false,
-                        error = if (_uiState.value.ownedTrips.isEmpty()) result.message else null,
-                    )
-                }
+            } else {
+                _uiState.value = _uiState.value.copy(isRefreshing = false)
             }
         }
+    }
+
+    fun consumeRefreshError() {
+        _uiState.value = _uiState.value.copy(refreshFailed = false)
     }
 
     fun removeSharedTrip(id: String) {
