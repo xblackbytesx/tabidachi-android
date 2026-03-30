@@ -86,7 +86,7 @@ class TripRepository(
                 ApiResult.Success(Unit)
             }
             is ApiResult.Error -> {
-                _syncStatus.value = SyncStatus.Error(result.message)
+                _syncStatus.value = SyncStatus.Idle
                 ApiResult.Error(result.message, result.code)
             }
         }

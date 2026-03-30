@@ -18,7 +18,7 @@ import com.example.tabidachi.network.TabidachiApi
 import android.net.Uri
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.android.Android
-import io.ktor.client.plugins.HttpRequestPipeline
+import io.ktor.client.request.HttpRequestPipeline
 
 @OptIn(coil3.annotation.ExperimentalCoilApi::class)
 class TabidachiApp : Application(), SingletonImageLoader.Factory {

@@ -46,7 +46,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import com.example.tabidachi.TabidachiApp
-import com.example.tabidachi.data.SyncStatus
 import com.example.tabidachi.ui.components.TripCard
 import com.example.tabidachi.ui.theme.TextMuted
 
@@ -60,17 +59,19 @@ fun DashboardScreen(
 ) {
     val viewModel = remember { DashboardViewModel(app) }
     val uiState by viewModel.uiState.collectAsState()
-    val syncStatus by viewModel.syncStatus.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
 
     var showShareDialog by remember { mutableStateOf(false) }
 
     val allTrips = uiState.ownedTrips + uiState.sharedTrips
 
-    // Show snackbar on sync error when we have cached data
-    LaunchedEffect(syncStatus) {
-        if (syncStatus is SyncStatus.Error && allTrips.isNotEmpty()) {
+    // Show snackbar when an in-flight refresh fails and cached data is available.
+    // Driven by uiState rather than the repository's syncStatus StateFlow to avoid
+    // stale error values triggering a spurious toast on each dashboard re-entry.
+    LaunchedEffect(uiState.refreshFailed) {
+        if (uiState.refreshFailed) {
             snackbarHostState.showSnackbar("Couldn't refresh — showing cached data")
+            viewModel.consumeRefreshError()
         }
     }
 
