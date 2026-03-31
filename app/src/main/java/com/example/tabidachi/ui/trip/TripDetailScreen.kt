@@ -37,6 +37,8 @@ import androidx.compose.material.icons.filled.Language
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
@@ -48,6 +50,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -129,8 +132,9 @@ fun TripDetailScreen(
     onNavigateToDashboard: () -> Unit = {},
 ) {
     val isDefaultTrip = app.prefsManager.isDefaultTripEnabled && app.prefsManager.defaultTripId == tripId
-    val viewModel = remember { TripDetailViewModel(app, tripId) }
+    val viewModel = viewModel(key = tripId) { TripDetailViewModel(app, tripId) }
     val uiState by viewModel.uiState.collectAsState()
+    val snackbarHostState = remember { SnackbarHostState() }
     var lightboxUrl by remember { mutableStateOf<String?>(null) }
     var lightboxCredit by remember { mutableStateOf<String?>(null) }
     val listState = rememberLazyListState()
@@ -172,6 +176,13 @@ fun TripDetailScreen(
         }
     }
 
+    LaunchedEffect(uiState.refreshFailed) {
+        if (uiState.refreshFailed) {
+            snackbarHostState.showSnackbar("Couldn't refresh — showing cached data")
+            viewModel.consumeRefreshError()
+        }
+    }
+
     // Auto-scroll to today on first load
     LaunchedEffect(uiState.data) {
         val data = uiState.data ?: return@LaunchedEffect
@@ -183,68 +194,75 @@ fun TripDetailScreen(
         }
     }
 
-    when {
-        uiState.isLoading && uiState.data == null -> {
-            LoadingState()
-        }
+    Box(modifier = Modifier.fillMaxSize()) {
+        when {
+            uiState.isLoading && uiState.data == null -> {
+                LoadingState()
+            }
 
-        uiState.error != null && uiState.data == null -> {
-            ErrorState(
-                message = uiState.error!!,
-                onRetry = { viewModel.refresh() },
-            )
-        }
+            uiState.error != null && uiState.data == null -> {
+                ErrorState(
+                    message = uiState.error!!,
+                    onRetry = { viewModel.refresh() },
+                )
+            }
 
-        uiState.data != null -> {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(MaterialTheme.colorScheme.background),
-            ) {
-                PullToRefreshBox(
-                    isRefreshing = uiState.isRefreshing,
-                    onRefresh = { viewModel.refresh() },
+            uiState.data != null -> {
+                Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(bottom = carouselHeight),
+                        .background(MaterialTheme.colorScheme.background),
                 ) {
-                    TripTimeline(
-                        summary = uiState.summary,
-                        data = uiState.data!!,
-                        listState = listState,
-                        onImageClick = { url, credit ->
-                            lightboxUrl = url
-                            lightboxCredit = credit
-                        },
-                        showDashboardLink = isDefaultTrip,
-                        onGoToDashboard = {
-                            app.prefsManager.isDefaultTripEnabled = false
-                            app.prefsManager.defaultTripId = null
-                            onNavigateToDashboard()
-                        },
-                    )
-                }
+                    PullToRefreshBox(
+                        isRefreshing = uiState.isRefreshing,
+                        onRefresh = { viewModel.refresh() },
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(bottom = carouselHeight),
+                    ) {
+                        TripTimeline(
+                            summary = uiState.summary,
+                            data = uiState.data!!,
+                            listState = listState,
+                            onImageClick = { url, credit ->
+                                lightboxUrl = url
+                                lightboxCredit = credit
+                            },
+                            showDashboardLink = isDefaultTrip,
+                            onGoToDashboard = {
+                                app.prefsManager.isDefaultTripEnabled = false
+                                app.prefsManager.defaultTripId = null
+                                onNavigateToDashboard()
+                            },
+                        )
+                    }
 
-                if (numDays > 0) {
-                    DayCarousel(
-                        numDays = numDays,
-                        data = uiState.data!!,
-                        selectedDay = selectedDay,
-                        carouselState = carouselState,
-                        navBarHeight = navBarHeight,
-                        onDayClick = { dayIdx ->
-                            selectedDay = dayIdx
-                            scope.launch {
-                                if (dayIdx < dayIndexMap.size) {
-                                    listState.animateScrollToItem(dayIndexMap[dayIdx])
+                    if (numDays > 0) {
+                        DayCarousel(
+                            numDays = numDays,
+                            data = uiState.data!!,
+                            selectedDay = selectedDay,
+                            carouselState = carouselState,
+                            navBarHeight = navBarHeight,
+                            onDayClick = { dayIdx ->
+                                selectedDay = dayIdx
+                                scope.launch {
+                                    if (dayIdx < dayIndexMap.size) {
+                                        listState.animateScrollToItem(dayIndexMap[dayIdx])
+                                    }
                                 }
-                            }
-                        },
-                        modifier = Modifier.align(Alignment.BottomCenter),
-                    )
+                            },
+                            modifier = Modifier.align(Alignment.BottomCenter),
+                        )
+                    }
                 }
             }
         }
+
+        SnackbarHost(
+            hostState = snackbarHostState,
+            modifier = Modifier.align(Alignment.BottomCenter),
+        )
     }
 
     if (lightboxUrl != null) {

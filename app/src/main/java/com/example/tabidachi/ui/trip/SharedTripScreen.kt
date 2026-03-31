@@ -30,6 +30,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -51,7 +52,7 @@ fun SharedTripScreen(
     shareToken: String,
     onNavigateBack: () -> Unit = {},
 ) {
-    val viewModel = remember { SharedTripViewModel(app, serverUrl, shareToken) }
+    val viewModel = viewModel(key = "$serverUrl/$shareToken") { SharedTripViewModel(app, serverUrl, shareToken) }
     val uiState by viewModel.uiState.collectAsState()
 
     when {

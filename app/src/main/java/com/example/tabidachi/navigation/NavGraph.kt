@@ -19,8 +19,11 @@ import com.example.tabidachi.ui.trip.TripDetailScreen
 fun TabidachiNavHost(app: TabidachiApp, activity: FragmentActivity) {
     val navController = rememberNavController()
 
+    val isReadyToUse = app.secureStorage.isConfigured() ||
+        (app.prefsManager.hasPinnedSharedTrips && app.prefsManager.setupCompleted)
+
     val startDestination: Any = when {
-        !app.secureStorage.isConfigured() -> SetupRoute
+        !isReadyToUse -> SetupRoute
         app.secureStorage.isPinConfigured() && !app.isAuthenticated -> LockRoute
         app.prefsManager.isDefaultTripEnabled && app.prefsManager.defaultTripId != null ->
             TripDetailRoute(app.prefsManager.defaultTripId!!)
@@ -41,8 +44,10 @@ fun TabidachiNavHost(app: TabidachiApp, activity: FragmentActivity) {
                     navController.navigate(SharedTripRoute(serverUrl, shareToken))
                 },
                 onViewSavedTrips = {
-                    // No popUpTo — back press returns to SetupScreen
-                    navController.navigate(DashboardRoute)
+                    app.prefsManager.setupCompleted = true
+                    navController.navigate(DashboardRoute) {
+                        popUpTo<SetupRoute> { inclusive = true }
+                    }
                 },
             )
         }
@@ -123,6 +128,12 @@ fun TabidachiNavHost(app: TabidachiApp, activity: FragmentActivity) {
                 activity = activity,
                 onBack = { navController.popBackStack() },
                 onLogout = {
+                    navController.navigate(SetupRoute) {
+                        popUpTo(0) { inclusive = true }
+                    }
+                },
+                onConnectAccount = {
+                    // Navigate to setup without clearing data — pinned trips survive in Room
                     navController.navigate(SetupRoute) {
                         popUpTo(0) { inclusive = true }
                     }
