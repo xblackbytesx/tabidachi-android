@@ -67,6 +67,9 @@ class SharedTripViewModel(
         val detail = _uiState.value.detail ?: return
         viewModelScope.launch {
             app.tripRepository.removeSharedTrip(detail.id)
+            if (!app.tripRepository.hasSharedTrips()) {
+                app.prefsManager.hasPinnedSharedTrips = false
+            }
             _uiState.value = _uiState.value.copy(isPinned = false)
         }
     }

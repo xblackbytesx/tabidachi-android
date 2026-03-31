@@ -73,6 +73,9 @@ class DashboardViewModel(private val app: TabidachiApp) : ViewModel() {
     fun removeSharedTrip(id: String) {
         viewModelScope.launch {
             app.tripRepository.removeSharedTrip(id)
+            if (_uiState.value.sharedTrips.all { it.id == id }) {
+                app.prefsManager.hasPinnedSharedTrips = false
+            }
         }
     }
 }

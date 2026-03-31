@@ -35,6 +35,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -57,7 +58,7 @@ fun SettingsScreen(
     onLogout: () -> Unit,
     onConnectAccount: () -> Unit = {},
 ) {
-    val viewModel = remember { SettingsViewModel(app) }
+    val viewModel = viewModel { SettingsViewModel(app) }
     val uiState by viewModel.uiState.collectAsState()
     val scope = rememberCoroutineScope()
     val biometricHelper = remember { BiometricHelper() }

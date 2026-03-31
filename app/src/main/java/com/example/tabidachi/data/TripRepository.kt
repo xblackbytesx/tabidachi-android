@@ -6,16 +6,10 @@ import com.example.tabidachi.network.ApiTripDetail
 import com.example.tabidachi.network.ApiTripSummary
 import com.example.tabidachi.network.AppJson
 import com.example.tabidachi.network.TabidachiApi
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.map
-
-sealed class SyncStatus {
-    data object Idle : SyncStatus()
-    data object Syncing : SyncStatus()
-    data class Error(val message: String) : SyncStatus()
-}
+import kotlinx.coroutines.launch
 
 data class TripSummary(
     val id: String,
@@ -42,9 +36,6 @@ class TripRepository(
 ) {
     private val json = AppJson
 
-    private val _syncStatus = MutableStateFlow<SyncStatus>(SyncStatus.Idle)
-    val syncStatus: StateFlow<SyncStatus> = _syncStatus
-
     fun observeTrips(): Flow<List<TripSummary>> {
         return dao.observeAll().map { entities ->
             entities.map { it.toSummary() }
@@ -70,7 +61,6 @@ class TripRepository(
     }
 
     suspend fun refreshTrips(): ApiResult<Unit> {
-        _syncStatus.value = SyncStatus.Syncing
         return when (val result = api.listTrips()) {
             is ApiResult.Success -> {
                 val now = System.currentTimeMillis()
@@ -82,13 +72,9 @@ class TripRepository(
                 dao.upsertAll(entities)
                 // Only delete owned trips not returned by the server; preserve shared/pinned trips
                 dao.deleteOwnedNotIn(result.data.map { it.id })
-                _syncStatus.value = SyncStatus.Idle
                 ApiResult.Success(Unit)
             }
-            is ApiResult.Error -> {
-                _syncStatus.value = SyncStatus.Idle
-                ApiResult.Error(result.message, result.code)
-            }
+            is ApiResult.Error -> ApiResult.Error(result.message, result.code)
         }
     }
 
@@ -119,22 +105,28 @@ class TripRepository(
         }
     }
 
-    /** Re-fetches all pinned shared trips from their respective servers. Failures are silently ignored to preserve the offline cache. */
+    /** Re-fetches all pinned shared trips from their respective servers in parallel. Failures are silently ignored to preserve the offline cache. */
     suspend fun refreshSharedTrips() {
         val shared = dao.getSharedTrips()
-        for (entity in shared) {
-            val serverUrl = entity.sharedFromServerUrl ?: continue
-            val shareToken = entity.sharedToken ?: continue
-            when (val result = api.getSharedTrip(serverUrl, shareToken)) {
-                is ApiResult.Success -> {
-                    val detail = result.data
-                    val detailJson = json.encodeToString(ApiTripData.serializer(), detail.data)
-                    dao.upsert(detail.toSharedEntity(System.currentTimeMillis(), detailJson, serverUrl, shareToken))
+        coroutineScope {
+            shared.forEach { entity ->
+                val serverUrl = entity.sharedFromServerUrl ?: return@forEach
+                val shareToken = entity.sharedToken ?: return@forEach
+                launch {
+                    when (val result = api.getSharedTrip(serverUrl, shareToken)) {
+                        is ApiResult.Success -> {
+                            val detail = result.data
+                            val detailJson = json.encodeToString(ApiTripData.serializer(), detail.data)
+                            dao.upsert(detail.toSharedEntity(System.currentTimeMillis(), detailJson, serverUrl, shareToken))
+                        }
+                        is ApiResult.Error -> { /* Keep stale cache — offline access is the whole point */ }
+                    }
                 }
-                is ApiResult.Error -> { /* Keep stale cache — offline access is the whole point */ }
             }
         }
     }
+
+    suspend fun hasSharedTrips(): Boolean = dao.getSharedTrips().isNotEmpty()
 
     /** Saves a shared trip to the local cache so it is available offline. */
     suspend fun pinSharedTrip(detail: ApiTripDetail, serverUrl: String, shareToken: String) {

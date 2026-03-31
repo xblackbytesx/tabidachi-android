@@ -16,6 +16,7 @@ data class TripDetailUiState(
     val isLoading: Boolean = true,
     val isRefreshing: Boolean = false,
     val error: String? = null,
+    val refreshFailed: Boolean = false,
 )
 
 class TripDetailViewModel(
@@ -43,6 +44,10 @@ class TripDetailViewModel(
         refresh()
     }
 
+    fun consumeRefreshError() {
+        _uiState.value = _uiState.value.copy(refreshFailed = false)
+    }
+
     fun refresh() {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isRefreshing = true, error = null)
@@ -55,6 +60,7 @@ class TripDetailViewModel(
                         isRefreshing = false,
                         isLoading = false,
                         error = if (_uiState.value.data == null) result.message else null,
+                        refreshFailed = _uiState.value.data != null,
                     )
                 }
             }

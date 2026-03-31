@@ -41,6 +41,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.ImeAction
@@ -57,7 +58,7 @@ fun DashboardScreen(
     onSettingsClick: () -> Unit,
     onOpenSharedTrip: (serverUrl: String, shareToken: String) -> Unit = { _, _ -> },
 ) {
-    val viewModel = remember { DashboardViewModel(app) }
+    val viewModel = viewModel { DashboardViewModel(app) }
     val uiState by viewModel.uiState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
 
