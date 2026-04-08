@@ -150,10 +150,16 @@ fun TransitCard(
                     }
                 }
                 if (carrierText.isNotBlank()) {
+                    val canTrack = event.trackFlight && !event.flightNumber.isNullOrBlank()
                     Text(
                         text = carrierText,
                         style = MaterialTheme.typography.labelSmall,
-                        color = transport.color,
+                        color = if (canTrack) TransitBlue else transport.color,
+                        modifier = if (canTrack) Modifier.clickable {
+                            val fn = event.flightNumber!!.trim().replace(" ", "")
+                            val uri = Uri.parse("https://www.flightradar24.com/$fn")
+                            try { context.startActivity(Intent(Intent.ACTION_VIEW, uri)) } catch (_: Exception) {}
+                        } else Modifier,
                     )
                 }
             }
