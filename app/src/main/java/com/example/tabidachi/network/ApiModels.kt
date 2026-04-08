@@ -109,6 +109,7 @@ data class ApiEvent(
     val arrival: ApiTransitPoint? = null,
     val carrier: String? = null,
     val flightNumber: String? = null,
+    val trackFlight: Boolean = false,
     // accommodation event fields
     val checkIn: Boolean = false,
     val checkOut: Boolean = false,
